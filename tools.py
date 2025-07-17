@@ -1120,8 +1120,8 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             chat.id,
             MediaStream(
 youtube_link,
-AudioQuality.STUDIO,
-                VideoQuality.UHD_4K,
+AudioQuality.HIGH,
+                VideoQuality.HD_720p,
                 video_flags=audio_flags,
                 ytdlp_parameters=f"--cookies-from-browser chrome",
 ),

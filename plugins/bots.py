@@ -364,7 +364,7 @@ async def seek_handler_func(client, message):
                 message.chat.id,
                 MediaStream(
                     current_song['yt_link'],
-                    AudioQuality.STUDIO,
+                    AudioQuality.HIGH,
                     VideoQuality.HD_720p,
                     video_flags=audio_flags,
                     ytdlp_parameters='--cookies-from-browser chrome',
