@@ -3787,7 +3787,7 @@ async def set_welcome_handler(client, message):
         user_data = user_sessions.find_one({"user_id": sender_id})
         print(type(OWNER_ID))
         print(type(sender_id))
-
+        uptime = await get_readable_time((time.time() - StartTime))
         if not sender_id == OWNER_ID:
             return await message.reply_text("Only bot owner is allowed to perform this command")
 
