@@ -403,7 +403,7 @@ async def add_active_chat(chat_id):
 async def remove_active_chat(chat_id):
     if chat_id in active:
         active.remove(chat_id)
-    chat_dir = f"{ggg}/user_{clients["bot"].me.id}/{chat_id}"
+    chat_dir = f"{ggg}/user_{clients['bot'].me.id}/{chat_id}"
     os.makedirs(chat_dir, exist_ok=True)
     clear_directory(chat_dir)
 
@@ -1136,7 +1136,7 @@ AudioQuality.STUDIO,
                 InlineKeyboardButton(text="▢", callback_data="end"),
             ],
         [                                                                                           InlineKeyboardButton(
-                text=f"{smallcap('Add to group')}", url=f"https://t.me/{clients["bot"].me.username}?startgroup=true"
+                text=f"{smallcap('Add to group')}", url=f"https://t.me/{clients['bot'].me.username}?startgroup=true"
             ),InlineKeyboardButton(
                 text="✖ Close",callback_data="close"
             )
@@ -1144,7 +1144,7 @@ AudioQuality.STUDIO,
         ])
         sent_message = await clients["bot"].send_photo(
             message.chat.id, thumb, play_styles[int(gvarstatus(OWNER_ID, "format") or 11)].format(lightyagami(mode),
-f"[{lightyagami(title)}](https://t.me/{clients["bot"].me.username}?start=vidid_{extract_video_id(youtube_link)})" if not os.path.exists(youtube_link) else lightyagami(title), duration, by.mention()),
+f"[{lightyagami(title)}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if not os.path.exists(youtube_link) else lightyagami(title), duration, by.mention()),
             reply_markup=keyboard        )
         asyncio.create_task(autoleave_vc(sent_message, duration,chat))
         asyncio.create_task(update_progress_button(sent_message, duration,chat))

@@ -1220,11 +1220,11 @@ async def format_welcome_message(client, text, chat_id, user_or_chat_name):
 
 @Client.on_callback_query(filters.regex(r"commands_(.*)"))
 async def commands_handler(client, callback_query):
-    data = callback_query.data.split("_", 1)[1]  # Extract command type
+    data = callback_query.data.split("_", 1)[1]          # Extract page name
     user_id = callback_query.from_user.id
     admin_file = f"{ggg}/admin.txt"
 
-    # Check if the user is an admin or owner
+    # --- Permission check (owner / admin / sudo) ---
     is_admin = False
     if os.path.exists(admin_file):
         with open(admin_file, "r") as file:
@@ -1233,325 +1233,173 @@ async def commands_handler(client, callback_query):
                 is_admin = True
     owner = await client.get_users(OWNER_ID)
     ow_id = owner.id if owner.username else None
-    
-    # Define command categories with detailed descriptions
+
+    # ---------- Command pages (text blocks) ----------
     playback_commands = """**🎵 PLAYBACK COMMANDS**
 <blockquote>
-**◾ /play or /vplay**
-- Play audio or video from YouTube
-- Usage: `/play [song name or URL]`
-- Can also reply to audio/video file or YouTube link
-- `/vplay` streams video with audio
-- Adds to queue if something is already playing
+◾ /play  /vplay        – queue YouTube audio/video
+◾ /playforce /vplayforce – force play (skip current)
+◾ /cplay /cvplay       – play in linked channel
+◾ /pause               – pause stream
+◾ /resume              – resume stream
+◾ /skip  /cskip        – next track
+◾ /end  /cend          – stop & clear queue
+◾ /seek <sec>          – jump forward
+◾ /seekback <sec>      – jump backward
+◾ /loop <1-20>         – repeat current song
+</blockquote>"""
 
-**◾ /playforce or /vplayforce**
-- Force play (interrupts current playback)
-- Usage: `/playforce [query]` or reply to media
-- Immediately stops current track and plays new one
-
-**◾ /cplay or /cvplay**
-- Play in linked channel (requires group-channel link)
-- Usage: `/cplay [query]` or reply to media
-- Only works in groups with linked broadcast channel
-
-**◾ /pause**
-- Pause current playback
-- Usage: `/pause`
-
-**◾ /resume**
-- Resume paused playback
-- Usage: `/resume`
-
-**◾ /skip**
-- Skip to next track in queue
-- Usage: `/skip`
-- If queue is empty, stops playback
-
-**◾ /end**
-- Stop playback and clear queue
-- Usage: `/end`
-
-**◾ /seek or /seekback**
-- Jump forward/backward in track
-- Usage: `/seek 30` or `/seekback 15`
-
-**◾ /loop**
-- Loop current track X times
-- Usage: `/loop 3` (loops 3 times)
-- Maximum 20 loops
-</blockquote>
-"""
+    auth_commands = """**🔐 AUTHORIZATION COMMANDS**
+<blockquote>
+◾ /auth <reply|id>   – allow user to use player
+◾ /unauth <reply|id> – remove that permission
+◾ /authlist          – list authorized users
+</blockquote>"""
 
     blocklist_commands = """**🚫 BLOCKLIST COMMANDS**
 <blockquote>
-**◾ /block**
-- Block user from using bot
-- Usage: `/block @spammer` or reply to a user
-- Owner/sudo-only command
-
-**◾ /unblock**
-- Unblock user
-- Usage: `/unblock @username` or reply to a user
-- Owner/sudo-only command
-
-**◾ /blocklist**
-- View all blocked users
-- Usage: `/blocklist`
-</blockquote>
-"""
+◾ /block <reply|id>   – block user from bot
+◾ /unblock <reply|id> – unblock user
+◾ /blocklist          – view blocked list
+</blockquote>"""
 
     sudo_commands = """**🔑 SUDO COMMANDS**
 <blockquote>
-**◾ /addsudo**
-- Add sudo user
-- Usage: `/addsudo @username` or reply to a user
-- Owner-only command
-- Grants user admin privileges for the bot
-
-**◾ /rmsudo**
-- Remove sudo user
-- Usage: `/rmsudo @username` or reply to a user
-- Owner-only command
-- Revokes sudo privileges from user
-
-**◾ /sudolist**
-- List all sudo users
-- Usage: `/sudolist`
-</blockquote>
-"""
+◾ /addsudo <reply|id> – add sudo user
+◾ /rmsudo <reply|id>  – remove sudo user
+◾ /sudolist           – list sudo users
+</blockquote>"""
 
     broadcast_commands = """**📢 BROADCAST COMMANDS**
 <blockquote>
-**◾ /broadcast**
-- Send message to all users
-- Usage: Reply to a message and type `/broadcast`
-- Sends copy of message to all users
-
-**◾ /fbroadcast**
-- Force broadcast message
-- Usage: Reply to a message and type `/fbroadcast`
-- Forwards original message to all users
-- Owner/sudo-only command
-</blockquote>
-"""
-
-    auth_commands = """**🔐 AUTH COMMANDS**
-<blockquote>
-**◾ /auth**
-- Authorize user to use bot
-- Usage: `/auth` (reply to user) or `/auth @username`
-- Allows non-admins to use bot commands
-- Admin-only command
-
-**◾ /unauth**
-- Remove user authorization
-- Usage: `/unauth` (reply to user) or `/unauth @username`
-- Revokes authorization from user
-- Admin-only command
-
-**◾ /authlist**
-- List authorized users
-- Usage: `/authlist`
-</blockquote>
-"""
+◾ /broadcast   – copy a message to all dialogs
+◾ /fbroadcast  – forward a message to all dialogs
+</blockquote>"""
 
     tools_commands = """**🛠️ TOOLS COMMANDS**
 <blockquote>
-**◾ /del**
-- Delete replied message
-- Usage: Reply to a message and type `/del`
-- Requires admin or delete permissions
+◾ /del        – delete replied message
+◾ /tagall     – mention all members
+◾ /cancel     – abort running tagall
+◾ /powers     – show bot permissions
+</blockquote>"""
 
-**◾ /tagall**
-- Tag all group members
-- Usage: `/tagall [optional message]`
-- Admin-only command
-
-**◾ /cancel**
-- Cancel ongoing tag process
-- Usage: `/cancel`
-
-**◾ /powers**
-- Check admin permissions
-- Usage: `/powers` (reply to user) or  `/powers`
-</blockquote>
-"""
-
-    kang_commands = """**🎨 KANG COMMANDS**
+    kang_commands = """**🎨 STICKER & MEME COMMANDS**
 <blockquote>
-**◾ /kang**
-- Clone sticker/video/photo
-- Usage: Reply to image/video/sticker and type `/kang [emoji]`
-- Adds sticker to your custom sticker pack
+◾ /kang       – clone sticker/photo to your pack
+◾ /mmf <text> – write text on image/sticker
+◾ /qt <text>  – create fake quote sticker
+</blockquote>"""
 
-**◾ /qt**
-- Create fake quote stickers
-- Usage: Reply to a message and type `/qt [fake text]`
-- Creates fake quote sticker of the user
-
-**◾ /mmf**
-- Write on images/stickers
-- Usage: Reply to an image/sticker and type `/mmf [text]`
-</blockquote>
-"""
-
-    status_commands = """**📊 STATUS COMMANDS**
+    status_commands = """**📊 STATUS & INFO COMMANDS**
 <blockquote>
-**◾ /ping**
-- Check bot response time
-- Usage: `/ping`
-- Shows bot latency and uptime
+◾ /ping       – latency & uptime
+◾ /stats      – bot usage stats
+◾ /ac         – active voice chats
+◾ /about      – user / group / channel info
+</blockquote>"""
 
-**◾ /about**
-- View user/chat information
-- Usage: `/about` (shows your info)
-- Reply to a user or `/about @username` (someone else's info)
-- `/about` in a group shows group info
+    owner_commands = """**⚙️ OWNER COMMANDS**
+<blockquote>
+◾ /reboot     – restart the bot
+◾ /setwelcome – set custom /start message
+</blockquote>"""
 
-**◾ /stats**
-- Bot statistics
-- Usage: `/stats`
-
-**◾ /ac**
-- View active calls
-- Usage: `/ac`
-</blockquote>
-"""
-
-    # Create category buttons for main commands page
+    # ---------- Navigation buttons ----------
     category_buttons = [
         [
-            InlineKeyboardButton("🎵 Pʟᴀʏʙᴀᴄᴋ", callback_data="commands_playback"),
-            InlineKeyboardButton("🔐 Aᴜᴛʜ", callback_data="commands_auth")
+            InlineKeyboardButton("🎵 Playback",   callback_data="commands_playback"),
+            InlineKeyboardButton("🔐 Auth",       callback_data="commands_auth"),
         ],
         [
-            InlineKeyboardButton("🛠️ Tᴏᴏʟꜱ", callback_data="commands_tools"),
-            InlineKeyboardButton("🎨 Kᴀɴɢ", callback_data="commands_kang")
+            InlineKeyboardButton("🚫 Blocklist",  callback_data="commands_blocklist"),
+            InlineKeyboardButton("🔑 Sudo",       callback_data="commands_sudo"),
         ],
         [
-            InlineKeyboardButton("📊 Sᴛᴀᴛᴜꜱ", callback_data="commands_status"),
-            InlineKeyboardButton("🚫 Bʟᴏᴄᴋʟɪꜱᴛ", callback_data="commands_blocklist")
+            InlineKeyboardButton("📢 Broadcast",  callback_data="commands_broadcast"),
+            InlineKeyboardButton("🛠️ Tools",     callback_data="commands_tools"),
         ],
         [
-            InlineKeyboardButton("🔑 Sᴜᴅᴏ", callback_data="commands_sudo"),
-            InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="commands_broadcast")
+            InlineKeyboardButton("🎨 Kang/Meme",  callback_data="commands_kang"),
+            InlineKeyboardButton("📊 Status",     callback_data="commands_status"),
         ],
-        [InlineKeyboardButton("Hᴏᴍᴇ", callback_data="commands_back")]
-    ]
-    
-    # Back button for category pages
-    back_button = [
-        [InlineKeyboardButton("Bᴀᴄᴋ", callback_data="commands_all")],
+        [
+            InlineKeyboardButton("⚙️ Owner",      callback_data="commands_owner"),
+        ],
+        [InlineKeyboardButton("🏠 Home",         callback_data="commands_back")],
     ]
 
-    # Handle different callbacks based on data
+    back_button = [[InlineKeyboardButton("🔙 Back", callback_data="commands_all")]]
+
+    # ---------- Routing ----------
     if data == "all":
-        # Show all command categories
         await callback_query.message.edit_caption(
             caption="**📜 SELECT A COMMAND CATEGORY**",
-            reply_markup=InlineKeyboardMarkup(category_buttons)
+            reply_markup=InlineKeyboardMarkup(category_buttons),
         )
     elif data == "playback":
-        await callback_query.message.edit_caption(
-            caption=playback_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
-    elif data == "blocklist":
-        await callback_query.message.edit_caption(
-            caption=blocklist_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
-    elif data == "sudo":
-        await callback_query.message.edit_caption(
-            caption=sudo_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
-    elif data == "broadcast":
-        await callback_query.message.edit_caption(
-            caption=broadcast_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
+        await callback_query.message.edit_caption(caption=playback_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "auth":
-        await callback_query.message.edit_caption(
-            caption=auth_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
+        await callback_query.message.edit_caption(caption=auth_commands, reply_markup=InlineKeyboardMarkup(back_button))
+    elif data == "blocklist":
+        await callback_query.message.edit_caption(caption=blocklist_commands, reply_markup=InlineKeyboardMarkup(back_button))
+    elif data == "sudo":
+        await callback_query.message.edit_caption(caption=sudo_commands, reply_markup=InlineKeyboardMarkup(back_button))
+    elif data == "broadcast":
+        await callback_query.message.edit_caption(caption=broadcast_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "tools":
-        await callback_query.message.edit_caption(
-            caption=tools_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
+        await callback_query.message.edit_caption(caption=tools_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "kang":
-        await callback_query.message.edit_caption(
-            caption=kang_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
+        await callback_query.message.edit_caption(caption=kang_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "status":
-        await callback_query.message.edit_caption(
-            caption=status_commands,
-            reply_markup=InlineKeyboardMarkup(back_button)
-        )
+        await callback_query.message.edit_caption(caption=status_commands, reply_markup=InlineKeyboardMarkup(back_button))
+    elif data == "owner":
+        await callback_query.message.edit_caption(caption=owner_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "back":
-        # System info collection
+        # Return to the start screen
         uptime = await get_readable_time((time.time() - StartTime))
-        start = datetime.datetime.now()
         try:
             cpu_cores = psutil.cpu_count(logical=False) or "N/A"
             ram = psutil.virtual_memory()
             ram_total = f"{ram.total / (1024**3):.2f} GB"
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_total = f"{disk.total / (1024**3):.2f} GB"
-        except Exception as e:
-            cpu_cores = "N/A"
-            ram_total = "N/A"
-            disk_total = "N/A"
-            
-        # Home buttons
+        except Exception:
+            cpu_cores = ram_total = disk_total = "N/A"
+
+        greet_message = (
+            f"🎵 **{client.me.mention()}** 🎵\n"
+            f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
+            f"🎧 **Your musical journey begins here**\n\n"
+            f"🔧 **SYSTEM STATUS**\n"
+            f"• Uptime: `{uptime}`\n"
+            f"• CPU cores: `{cpu_cores}`\n"
+            f"• RAM: `{ram_total}`\n"
+            f"• Disk: `{disk_total}`\n\n"
+            f"✨ **Premium features**\n"
+            f"• 8D surround + Hi-Fi\n"
+            f"• 4K ultra-HD streaming\n"
+            f"• 0.1 s response\n"
+            f"• 20+ smart controls\n\n"
+            f"⚙️ **Performance**\n"
+            f"• 24/7 nonstop playback\n"
+            f"• 99.9 % uptime guarantee"
+        )
+
         buttons = [
-            [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
-            [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
+            [InlineKeyboardButton("Add me to group", url=f"https://t.me/{client.me.username}?startgroup=true")],
+            [InlineKeyboardButton("Help & commands", callback_data="commands_all")],
             [
-                InlineKeyboardButton(
-                    "Cʀᴇᴀᴛᴏʀ",
-                    user_id=OWNER_ID
-                ) if ow_id else InlineKeyboardButton(
-                    "Cʀᴇᴀᴛᴏʀ",
-                    url=f"https://t.me/NubDockerbot"
-                ),
-                InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", "https://t.me/nub_coder_updates")
+                InlineKeyboardButton("Creator", user_id=OWNER_ID) if ow_id else
+                InlineKeyboardButton("Creator", url="https://t.me/NubDockerbot"),
+                InlineKeyboardButton("Support chat", url="https://t.me/nub_coder_updates"),
             ],
         ]
-
-        greet_message = gvarstatus(client.me.id, "WELCOME") or f"""
-🎵 **{client.me.mention()}** 🎵
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-
-🎧 **Yᴏᴜʀ ᴍᴜꜱɪᴄᴀʟ ᴊᴏᴜʀɴᴇʏ ʙᴇɢɪɴꜱ ʜᴇʀᴇ**
-
-🔧 **SYSTEM STATUS**
-• **Uᴘᴛɪᴍᴇ** » `{uptime}`
-• **CPU ᴄᴏʀᴇꜱ** » `{cpu_cores}`
-• **RAM** » `{ram_total}`
-• **Dɪꜱᴋ** » `{disk_total}`
-
-✨ **Pʀᴇᴍɪᴜᴍ Fᴇᴀᴛᴜʀᴇꜱ**
-**• 8D ꜱᴜʀʀᴏᴜɴᴅ ꜱᴏᴜɴᴅ + ʜɪ-ꜰɪ**
-**• 4K ᴜʟᴛʀᴀ HD ꜱᴛʀᴇᴀᴍɪɴɢ**
-**• 0.1ꜱ ʀᴇꜱᴘᴏɴꜱᴇ ᴛɪᴍᴇ**
-**• 20+ ꜱᴍᴀʀᴛ ᴄᴏɴᴛʀᴏʟꜱ**
-
-⚙️ **Pᴇʀꜰᴏʀᴍᴀɴᴄᴇ**
-**• 24/7 ɴᴏɴꜱᴛᴏᴘ ᴘʟᴀʏʙᴀᴄᴋ**
-**• 99.9% ᴜᴘᴛɪᴍᴇ ɢᴜᴀʀᴀɴᴛᴇᴇ**"""
         await callback_query.message.edit_caption(
-            caption=await format_welcome_message(
-                client, 
-                greet_message, 
-                callback_query.message.chat.id,
-                callback_query.from_user.first_name if callback_query.message.chat.type == enums.ChatType.PRIVATE else callback_query.message.chat.title
-            ),
-            reply_markup=InlineKeyboardMarkup(buttons)
+            caption=greet_message,
+            reply_markup=InlineKeyboardMarkup(buttons),
         )
+
 
 
 @Client.on_message(filters.command("blocklist"))
