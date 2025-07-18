@@ -1199,7 +1199,8 @@ async def format_welcome_message(client, text, chat_id, user_or_chat_name):
     try:
         # Ensure user_or_chat_name is a string, even if None is passed
         user_or_chat_name = str(user_or_chat_name) if user_or_chat_name is not None else ""
-        formatted_text = text.replace("{name}", user_or_chat_name)
+        formatted_text = text
+        formatted_text = formatted_text.replace("{name}", user_or_chat_name)
         formatted_text = formatted_text.replace("{id}", str(chat_id))
         formatted_text = formatted_text.replace("{botname}", client.me.mention())
         return formatted_text
@@ -1346,50 +1347,36 @@ async def commands_handler(client, callback_query):
         await callback_query.message.edit_caption(caption=status_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "owner":
         await callback_query.message.edit_caption(caption=owner_commands, reply_markup=InlineKeyboardMarkup(back_button))
-    elif data == "back":
-        # Return to the start screen
-        uptime = await get_readable_time((time.time() - StartTime))
-        try:
-            cpu_cores = psutil.cpu_count(logical=False) or "N/A"
-            ram = psutil.virtual_memory()
-            ram_total = f"{ram.total / (1024**3):.2f} GB"
-            disk = psutil.disk_usage("/")
-            disk_total = f"{disk.total / (1024**3):.2f} GB"
-        except Exception:
-            cpu_cores = ram_total = disk_total = "N/A"
+        elif data == "back":
+            name = callback_query.from_user.mention()
+            botname = client.me.mention()
+            greet_message = f"""
+🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
-        greet_message = (
-            f"🎵 **{client.me.mention()}** 🎵\n"
-            f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
-            f"🎧 **Your musical journey begins here**\n\n"
-            f"🔧 **SYSTEM STATUS**\n"
-            f"• Uptime: `{uptime}`\n"
-            f"• CPU cores: `{cpu_cores}`\n"
-            f"• RAM: `{ram_total}`\n"
-            f"• Disk: `{disk_total}`\n\n"
-            f"✨ **Premium features**\n"
-            f"• 8D surround + Hi-Fi\n"
-            f"• 4K ultra-HD streaming\n"
-            f"• 0.1 s response\n"
-            f"• 20+ smart controls\n\n"
-            f"⚙️ **Performance**\n"
-            f"• 24/7 nonstop playback\n"
-            f"• 99.9 % uptime guarantee"
-        )
+🎶 Your **musical journey** begins with {botname}!
 
-        buttons = [
-            [InlineKeyboardButton("Add me to group", url=f"https://t.me/{client.me.username}?startgroup=true")],
-            [InlineKeyboardButton("Help & commands", callback_data="commands_all")],
-            [
-                InlineKeyboardButton("Creator", user_id=OWNER_ID) if ow_id else
-                InlineKeyboardButton("Creator", url="https://t.me/NubDockerbot"),
-                InlineKeyboardButton("Support chat", url="https://t.me/nub_coder_updates"),
-            ],
-        ]
-        await callback_query.message.edit_caption(
-            caption=greet_message,
-            reply_markup=InlineKeyboardMarkup(buttons),
-        )
+✨ Enjoy _crystal-clear_ audio and a vast library of sounds.
+
+🚀 Get ready for an *unparalleled* musical adventure!
+"""
+            buttons = [
+                [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
+                [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
+                [
+                    InlineKeyboardButton(
+                        "Cʀᴇᴀᴛᴏʀ",
+                        user_id=OWNER_ID
+                    ) if ow_id else InlineKeyboardButton(
+                        "Cʀᴇᴀᴛᴏʀ",
+                        url=f"https://t.me/NubDockerbot"
+                    ),
+                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=gvarstatus(client.me.id, "support") or f"https://t.me/{GROUP}")
+                ],
+            ]
+            await callback_query.message.edit_caption(
+                caption=greet_message,
+                reply_markup=InlineKeyboardMarkup(buttons),
+            )
 
 
 
