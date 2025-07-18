@@ -1359,7 +1359,8 @@ async def commands_handler(client, callback_query):
 
 🚀 Get ready for an *unparalleled* musical adventure!
 """
-            greet_message = await format_welcome_message(client, greet_message, user_id, callback_query.from_user.mention())            buttons = [
+            greet_message = await format_welcome_message(client, greet_message, user_id, callback_query.from_user.mention())
+            buttons = [
                 [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
                 [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
                 [
