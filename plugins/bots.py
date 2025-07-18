@@ -3994,3 +3994,15 @@ async def set_welcome_handler(client, message):
         return await message.reply_text(error_msg)
 
 
+
+
+
+@Client.on_message(filters.command(["resetwelcome", "rwelcome"]) & filters.group & ~filters.edited)
+async def resetwelcome(client: Client, message: Message):
+    if not await is_admin(message.chat.id, message.from_user.id):
+        return await message.reply_text("You are not an admin.")
+
+    await set_welcome(message.chat.id, None, None)
+    await message.reply_text("Welcome message and logo have been reset.")
+
+
