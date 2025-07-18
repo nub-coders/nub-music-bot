@@ -1350,7 +1350,7 @@ async def commands_handler(client, callback_query):
         elif data == "back":
             name = callback_query.from_user.mention()
             botname = client.me.mention()
-            greet_message = f"""
+            greet_message = gvarstatus(client.me.id, "WELCOME") or """
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
@@ -1359,7 +1359,7 @@ async def commands_handler(client, callback_query):
 
 🚀 Get ready for an *unparalleled* musical adventure!
 """
-            buttons = [
+            greet_message = await format_welcome_message(client, greet_message, user_id, callback_query.from_user.mention())            buttons = [
                 [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
                 [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
                 [
