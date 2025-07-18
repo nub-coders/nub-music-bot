@@ -3773,6 +3773,9 @@ from pyrogram import Client, filters
 async def set_welcome_handler(client, message):
     try:
         sender_id = message.from_user.id
+        if not sender_id == OWNER_ID:
+            return await message.reply_text("Only bot owner is allowed to perform this command")
+
         user_data = user_sessions.find_one({"user_id": sender_id})
 
 
@@ -3994,7 +3997,7 @@ async def set_welcome_handler(client, message):
 
 
 
-@Client.on_message(filters.command(["resetwelcome", "rwelcome"]) & filters.group & ~filters.edited)
+@Client.on_message(filters.command("resetwelcome") & filters.group)
 async def resetwelcome(client: Client, message: Message):
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
