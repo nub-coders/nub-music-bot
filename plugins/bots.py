@@ -1172,7 +1172,7 @@ async def user_client_start_handler(client, message):
 
 
 
-       greet_message = gvarstatus(client.me.id, "WELCOME") or f"""
+        greet_message = gvarstatus(client.me.id, "WELCOME") or """
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
