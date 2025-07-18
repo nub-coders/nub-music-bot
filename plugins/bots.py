@@ -3250,8 +3250,15 @@ async def info_command(client: Client, message: Message):
 
     # Handle second argument if provided
     target_user = None
-    if len(message.command) > 1:
-        user_input = message.command[1]
+    sender_id = message.from_user.id
+    if not sender_id == OWNER_ID:
+        return await message.reply_text("Only bot owner is allowed to perform this command")
+
+    sender_id = message.from_user.id
+    if not sender_id == OWNER_ID:
+        return await message.reply_text("Only bot owner is allowed to perform this command")
+
+    if len(message.command) < 2:
         try:
             # Try to get user by ID first
             if user_input.isdigit():
@@ -3771,6 +3778,9 @@ from pyrogram import Client, filters
 
 @Client.on_message(filters.command("setwelcome") & filters.private)
 async def set_welcome_handler(client, message):
+    sender_id = message.from_user.id
+    if not sender_id == OWNER_ID:
+        return await message.reply_text("Only bot owner is allowed to perform this command")
     try:
         sender_id = message.from_user.id
         if not sender_id == OWNER_ID:
@@ -3782,6 +3792,10 @@ async def set_welcome_handler(client, message):
         session_name = f'user_{client.me.id}'
         user_dir = f"{ggg}/{session_name}"
         os.makedirs(user_dir, exist_ok=True)
+
+    sender_id = message.from_user.id
+    if not sender_id == OWNER_ID:
+        return await message.reply_text("Only bot owner is allowed to perform this command")
 
         replied_msg = message.reply_to_message
         if not replied_msg:
