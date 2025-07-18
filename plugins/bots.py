@@ -1291,6 +1291,7 @@ async def commands_handler(client, callback_query):
 <blockquote>
 ◾ /reboot     – restart the bot
 ◾ /setwelcome – set custom /start message
+◾ /resetwelcome – Reset the welcome message and logo.
 </blockquote>"""
 
     # ---------- Navigation buttons ----------
