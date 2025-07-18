@@ -1173,26 +1173,14 @@ async def user_client_start_handler(client, message):
 
 
        greet_message = gvarstatus(client.me.id, "WELCOME") or f"""
-🎵 **{client.me.mention()}** 🎵
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
-🎧 **Yᴏᴜʀ ᴍᴜꜱɪᴄᴀʟ ᴊᴏᴜʀɴᴇʏ ʙᴇɢɪɴꜱ ʜᴇʀᴇ**
+🎶 Your **musical journey** begins with {botname}!
 
-🔧 **SYSTEM STATUS**
-• **Uᴘᴛɪᴍᴇ** » `{uptime}`
-• **CPU ᴄᴏʀᴇꜱ** » `{cpu_cores}`
-• **RAM** » `{ram_total}`
-• **Dɪꜱᴋ** » `{disk_total}`
+✨ Enjoy _crystal-clear_ audio and a vast library of sounds.
 
-✨ **Pʀᴇᴍɪᴜᴍ Fᴇᴀᴛᴜʀᴇꜱ**
-**• 8D ꜱᴜʀʀᴏᴜɴᴅ ꜱᴏᴜɴᴅ + ʜɪ-ꜰɪ**
-**• 4K ᴜʟᴛʀᴀ HD ꜱᴛʀᴇᴀᴍɪɴɢ**
-**• 0.1ꜱ ʀᴇꜱᴘᴏɴꜱᴇ ᴛɪᴍᴇ**
-**• 20+ ꜱᴍᴀʀᴛ ᴄᴏɴᴛʀᴏʟꜱ**
-
-⚙️ **Pᴇʀꜰᴏʀᴍᴀɴᴄᴇ**
-**• 24/7 ɴᴏɴꜱᴛᴏᴘ ᴘʟᴀʏʙᴀᴄᴋ**
-**• 99.9% ᴜᴘᴛɪᴍᴇ ɢᴜᴀʀᴀɴᴛᴇᴇ**"""
+🚀 Get ready for an *unparalleled* musical adventure!
+"""
 
        send = client.send_video if alive_logo.endswith(".mp4") else client.send_photo
        await editing.delete()
@@ -3970,24 +3958,14 @@ async def set_welcome_handler(client, message):
                     alive_logo = rename_file(alive_logo, logo_path_mp4)
 
             welcome_text = gvarstatus(sender_id, "WELCOME") or f"""
-🎵 **{client.me.mention()}** 🎵
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-🎧 **Yᴏᴜʀ ᴍᴜꜱɪᴄᴀʟ ᴊᴏᴜʀɴᴇʏ ʙᴇɢɪɴꜱ ʜᴇʀᴇ**
-🔧 **SYSTEM STATUS**
-• **Uᴘᴛɪᴍᴇ** » `{uptime}`
-• **CPU ᴄᴏʀᴇꜱ** » `{cpu_cores}`
-• **RAM** » `{ram_total}`
-• **Dɪꜱᴋ** » `{disk_total}`
+🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
-✨ **Pʀᴇᴍɪᴜᴍ Fᴇᴀᴛᴜʀᴇꜱ**
-**• 8D ꜱᴜʀʀᴏᴜɴᴅ ꜱᴏᴜɴᴅ + ʜɪ-ꜰɪ**
-**• 4K ᴜʟᴛʀᴀ HD ꜱᴛʀᴇᴀᴍɪɴɢ**
-**• 0.1ꜱ ʀᴇꜱᴘᴏɴꜱᴇ ᴛɪᴍᴇ**
-**• 20+ ꜱᴍᴀʀᴛ ᴄᴏɴᴛʀᴏʟꜱ**
+🎶 Your **musical journey** begins with {botname}!
 
-⚙️ **Pᴇʀꜰᴏʀᴍᴀɴᴄᴇ**
-**• 24/7 ɴᴏɴꜱᴛᴏᴘ ᴘʟᴀʏʙᴀᴄᴋ**
-**• 99.9% ᴜᴘᴛɪᴍᴇ ɢᴜᴀʀᴀɴᴛᴇᴇ**"""
+✨ Enjoy _crystal-clear_ audio and a vast library of sounds.
+
+🚀 Get ready for an *unparalleled* musical adventure!
+"""
             if alive_logo.endswith(".mp4"):
                 await client.send_video(
                     message.chat.id,
