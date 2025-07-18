@@ -1123,7 +1123,7 @@ async def user_client_start_handler(client, message):
            "Cʀᴇᴀᴛᴏʀ",
            url="https://t.me/NubDockerbot"
        ),
-       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", f"https://t.me/{GROUP}")
+       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url = f"https://t.me/{GROUP}")
    ],
 ]
     import psutil
@@ -1371,7 +1371,7 @@ async def commands_handler(client, callback_query):
                         "Cʀᴇᴀᴛᴏʀ",
                         url="https://t.me/NubDockerbot"
                     ),
-                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", f"https://t.me/{GROUP}")
+                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url = f"https://t.me/{GROUP}")
                 ],
             ]
             await callback_query.message.edit_caption(
