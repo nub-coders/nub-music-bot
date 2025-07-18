@@ -1187,7 +1187,7 @@ async def user_client_start_handler(client, message):
        await send(
                 user_id ,
                 alive_logo,
-                caption=await format_welcome_message(client, greet_message, message.chat.id, message.from_user.mention() if message.chat.type == enums.ChatType.PRIVATE else message.chat.title )
+                caption=await format_welcome_message(client, greet_message, user_id, message.from_user.mention() if message.chat.type == enums.ChatType.PRIVATE else message.chat.title or "")
 ,reply_markup=InlineKeyboardMarkup(buttons)
             )
     except Exception as e:
@@ -1197,9 +1197,11 @@ async def user_client_start_handler(client, message):
 async def format_welcome_message(client, text, chat_id, user_or_chat_name):
     """Helper function to format welcome message with real data"""
     try:
+        # Ensure user_or_chat_name is a string, even if None is passed
+        user_or_chat_name = str(user_or_chat_name) if user_or_chat_name is not None else ""
         formatted_text = text.replace("{name}", user_or_chat_name)
         formatted_text = formatted_text.replace("{id}", str(chat_id))
-        formatted_text = formatted_text.replace("{botname}", f"@{client.me.username}")
+        formatted_text = formatted_text.replace("{botname}", client.me.mention())
         return formatted_text
     except Exception as e:
         logging.error(f"Error formatting welcome message: {str(e)}")
@@ -3778,21 +3780,6 @@ from pyrogram import Client, filters
 
 @Client.on_message(filters.command("setwelcome") & filters.private)
 async def set_welcome_handler(client, message):
-    sender_id = message.from_user.id
-    if not sender_id == OWNER_ID:
-        return await message.reply_text("Only bot owner is allowed to perform this command")
-    try:
-        sender_id = message.from_user.id
-        if not sender_id == OWNER_ID:
-            return await message.reply_text("Only bot owner is allowed to perform this command")
-
-        user_data = user_sessions.find_one({"user_id": sender_id})
-
-
-        session_name = f'user_{client.me.id}'
-        user_dir = f"{ggg}/{session_name}"
-        os.makedirs(user_dir, exist_ok=True)
-
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
         return await message.reply_text("Only bot owner is allowed to perform this command")
