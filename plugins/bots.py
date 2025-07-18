@@ -4002,7 +4002,8 @@ async def resetwelcome(client: Client, message: Message):
     if not await is_admin(message.chat.id, message.from_user.id):
         return await message.reply_text("You are not an admin.")
 
-    await set_welcome(message.chat.id, None, None)
+    set_gvar(client.me.id, "WELCOME", None)
+    set_gvar(client.me.id, "LOGO", None)
     await message.reply_text("Welcome message and logo have been reset.")
 
 
