@@ -3997,7 +3997,7 @@ async def set_welcome_handler(client, message):
 
 
 
-@Client.on_message(filters.command("resetwelcome") & filters.group)
+@Client.on_message(filters.command("resetwelcome"))
 async def resetwelcome(client: Client, message: Message):
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
