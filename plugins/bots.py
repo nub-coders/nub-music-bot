@@ -3988,14 +3988,12 @@ async def set_welcome_handler(client, message):
                     message.chat.id,
                     welcome_text,
                 )
-
     except Exception as e:
         error_msg = f"❌ Error: `{str(e)}`"
         logger.info(f"Error for user {message.from_user.id}: {str(e)}")
         return await message.reply_text(error_msg)
 
-
-@Client.on_message(filters.command("resetwelcome"))
+@Client.on_message(filters.command(["resetwelcome", "rwelcome"]))
 async def resetwelcome(client: Client, message: Message):
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
