@@ -1172,7 +1172,7 @@ async def user_client_start_handler(client, message):
 
 
 
-        greet_message = gvarstatus(client.me.id, "WELCOME") or """
+       greet_message = gvarstatus(client.me.id, "WELCOME") or """
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
@@ -1347,7 +1347,7 @@ async def commands_handler(client, callback_query):
         await callback_query.message.edit_caption(caption=status_commands, reply_markup=InlineKeyboardMarkup(back_button))
     elif data == "owner":
         await callback_query.message.edit_caption(caption=owner_commands, reply_markup=InlineKeyboardMarkup(back_button))
-        elif data == "back":
+    elif data == "back":
             name = callback_query.from_user.mention()
             botname = client.me.mention()
             greet_message = gvarstatus(client.me.id, "WELCOME") or """
