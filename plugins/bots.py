@@ -3774,11 +3774,7 @@ async def set_welcome_handler(client, message):
     try:
         sender_id = message.from_user.id
         user_data = user_sessions.find_one({"user_id": sender_id})
-        print(type(OWNER_ID))
-        print(type(sender_id))
-        uptime = await get_readable_time((time.time() - StartTime))
-        if not sender_id == OWNER_ID:
-            return await message.reply_text("Only bot owner is allowed to perform this command")
+
 
         session_name = f'user_{client.me.id}'
         user_dir = f"{ggg}/{session_name}"
@@ -4000,8 +3996,9 @@ async def set_welcome_handler(client, message):
 
 @Client.on_message(filters.command(["resetwelcome", "rwelcome"]) & filters.group & ~filters.edited)
 async def resetwelcome(client: Client, message: Message):
-    if not await is_admin(message.chat.id, message.from_user.id):
-        return await message.reply_text("You are not an admin.")
+    sender_id = message.from_user.id
+    if not sender_id == OWNER_ID:
+        return await message.reply_text("Only bot owner is allowed to perform this command")
 
     set_gvar(client.me.id, "WELCOME", None)
     set_gvar(client.me.id, "LOGO", None)
