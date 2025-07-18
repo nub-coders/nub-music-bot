@@ -1121,9 +1121,9 @@ async def user_client_start_handler(client, message):
            user_id=OWNER_ID
        ) if ow_id else InlineKeyboardButton(
            "Cʀᴇᴀᴛᴏʀ",
-           url=f"https://t.me/NubDockerbot"
+           url="https://t.me/NubDockerbot"
        ),
-       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=gvarstatus(client.me.id, "support") or f"https://t.me/{GROUP}")
+       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", f"https://t.me/{GROUP}")
    ],
 ]
     import psutil
@@ -1369,9 +1369,9 @@ async def commands_handler(client, callback_query):
                         user_id=OWNER_ID
                     ) if ow_id else InlineKeyboardButton(
                         "Cʀᴇᴀᴛᴏʀ",
-                        url=f"https://t.me/NubDockerbot"
+                        url="https://t.me/NubDockerbot"
                     ),
-                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=gvarstatus(client.me.id, "support") or f"https://t.me/{GROUP}")
+                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", f"https://t.me/{GROUP}")
                 ],
             ]
             await callback_query.message.edit_caption(
