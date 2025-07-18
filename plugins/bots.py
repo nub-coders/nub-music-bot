@@ -3781,8 +3781,9 @@ from pyrogram import Client, filters
 @Client.on_message(filters.command("setwelcome") & filters.private)
 async def set_welcome_handler(client, message):
     sender_id = message.from_user.id
-    if not sender_id == OWNER_ID:
-        return await message.reply_text("Only bot owner is allowed to perform this command")
+    try:
+        if not sender_id == OWNER_ID:
+           return await message.reply_text("Only bot owner is allowed to perform this command")
 
         replied_msg = message.reply_to_message
         if not replied_msg:
