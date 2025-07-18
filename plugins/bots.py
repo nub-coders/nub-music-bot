@@ -1187,7 +1187,7 @@ async def user_client_start_handler(client, message):
        await send(
                 user_id ,
                 alive_logo,
-                caption=await format_welcome_message(client, greet_message, user_id, message.from_user.mention() if message.chat.type == enums.ChatType.PRIVATE else message.chat.title or "")
+                caption=await format_welcome_message(client, greet_message, user_id, message.from_user.mention() if message.chat.type == enums.ChatType.PRIVATE else (message.chat.title or ""))
 ,reply_markup=InlineKeyboardMarkup(buttons)
             )
     except Exception as e:
