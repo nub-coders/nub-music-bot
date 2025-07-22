@@ -376,10 +376,12 @@ async def seek_handler_func(client, message):
 
             # Seek to specified position
             to_seek = format_duration(total_seek)
+            # Use video_url if available, otherwise fallback to yt_link
+            stream_url = current_song.get('video_url') or current_song['yt_link']
             await call_py.play(
                 message.chat.id,
                 MediaStream(
-                    current_song['yt_link'],
+                    stream_url,
                     AudioQuality.HIGH,
                     VideoQuality.HD_720p,
                     video_flags=audio_flags,
