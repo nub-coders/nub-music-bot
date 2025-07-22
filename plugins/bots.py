@@ -1728,7 +1728,7 @@ async def play_handler_func(client, message):
     elif len(input_text) == 2:  
         search_query = input_text[1]  
 
-        title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query,user_dir)
+        title, duration, youtube_link, video_url, thumbnail, channel_name, views, video_id = handle_youtube(search_query,user_dir)
         if not youtube_link:  
             try:  
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")  
@@ -2086,13 +2086,15 @@ def handle_youtube_ytdlp(argument):
         is_url = re.match(r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+", argument)
 
         ydl_opts = {
-            'format': 'bestaudio/best',
-            'quiet': True,
+            'quiet': True, # Suppress output
             'no_warnings': True,
-            'extract_flat': True,
-            'noplaylist': True,
-            'skip_download': True,
-            'cookiesfrombrowser': ('chrome',),
+            'extract_flat': False,
+            'skip_download': True, # Don't download, just extract info
+            'format': 'best[height<=720]/best', # Get reasonable quality URLs
+            'writeinfojson': False,
+            'writethumbnail': False,
+            'cookiesfrombrowser': ('chrome',), # Extract cookies from Chrome browser
+            'cookiefile': None, # Can be set to a specific cookie file path if needed
         }
         
 
@@ -2108,10 +2110,26 @@ def handle_youtube_ytdlp(argument):
             video_id = info.get('id', 'ID not found')
             youtube_link = f'https://youtu.be/{video_id}'
 
+            # Extract video URL from formats
+            formats = info.get('formats', [])
+            video_url = youtube_link  # Default fallback
+
+            # Find best video URL (with audio preferred)
+            video_formats = [f for f in formats if f.get('vcodec') != 'none']
+            if video_formats:
+                # Prefer formats with both video and audio
+                video_with_audio = [f for f in video_formats if f.get('acodec') != 'none']
+                if video_with_audio:
+                    best_video = max(video_with_audio, key=lambda x: x.get('height', 0) or 0)
+                else:
+                    best_video = max(video_formats, key=lambda x: x.get('height', 0) or 0)
+                video_url = best_video.get('url', youtube_link)
+
             return (
                 info.get('title', 'Title not found'),
                 format_duration(info.get('duration', 0)),
                 youtube_link,
+                video_url,
                 thumbnail,
                 info.get('uploader', 'Channel not found'),
                 info.get('view_count', 'N/A'),
@@ -2149,7 +2167,7 @@ def handle_youtube(argument, directory):
     Falls back to yt-dlp if the YouTube API fails.
     
     Returns:
-        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
+        tuple: (title, duration, youtube_link, video_url, thumbnail, channel_name, views, video_id)
     """
     # First try using the YouTube Data API
     
@@ -2158,7 +2176,7 @@ def handle_youtube(argument, directory):
     # If both methods fail, return error values
     if not result:
         logger.error("Both YouTube API and yt-dlp failed")
-        return ("Error", "00:00", None, None, None, None, None)
+        return ("Error", "00:00", None, None, None, None, None, None)
     
     return result
 
