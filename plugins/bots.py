@@ -488,7 +488,7 @@ async def auth_user(client, message):
                         upsert=True
                     )
                     await message.reply(f"User {replied_user_id} has been authorized in this chat.")
-                    AUTH[client.me.id].setdefault[str(chat_id)].append(replied_user_id)
+                    AUTH.setdefault[str(chat_id)].append(replied_user_id)
                 else:
                     await message.reply(f"User {replied_user_id} is already authorized in this chat.")
             else:
@@ -510,7 +510,7 @@ async def auth_user(client, message):
                         upsert=True
                     )
                     await message.reply(f"User {user_id_to_auth} has been authorized in this chat.")
-                    AUTH[client.me.id]].setdefault[str(chat_id)].append(user_id_to_auth)
+                    AUTH.setdefault[str(chat_id)].append(user_id_to_auth)
                 else:
                     await message.reply(f"User {user_id_to_auth} is already authorized in this chat.")
             except ValueError:
@@ -557,7 +557,7 @@ async def unauth_user(client, message):
                     upsert=True
                 )
                 await message.reply(f"User {replied_user_id} has been removed from authorized users in this chat.")
-                AUTH[client.me.id].remove(replied_user_id)
+                AUTH.remove(replied_user_id)
             else:
                 await message.reply(f"User {replied_user_id} is not authorized in this chat.")
         else:
@@ -577,7 +577,7 @@ async def unauth_user(client, message):
                         upsert=True
                     )
                     await message.reply(f"User {user_id_to_unauth} has been removed from authorized users in this chat.")
-                    AUTH[client.me.id].remove(user_id_to_unauth)
+                    AUTH.remove(user_id_to_unauth)
                 else:
                     await message.reply(f"User {user_id_to_unauth} is not authorized in this chat.")
             except ValueError:
@@ -842,7 +842,7 @@ async def add_to_sudo(client, message):
                         upsert=True
                     )
                     await message.reply(f"User {replied_user_id} has been added to sudoers list.")
-                    SUDO[client.me.id].append(replied_user_id)
+                    SUDO.append(replied_user_id)
                 else:
                     await message.reply(f"User {replied_user_id} is already in sudoers list.")
             else:
@@ -876,7 +876,7 @@ async def add_to_sudo(client, message):
                         upsert=True
                     )
                     await message.reply(f"User {target_user_id} has been added to sudoers list.")
-                    SUDO[client.me.id].append(target_user_id)
+                    SUDO.append(target_user_id)
                 else:
                     await message.reply(f"User {target_user_id} is already in sudoers list.")
             except ValueError:
@@ -931,7 +931,7 @@ async def remove_from_sudo(client, message):
                         {"$pull": {"SUDOERS": replied_user_id}}
                     )
                     await message.reply(f"User {replied_user_id} has been removed from sudoers list.")
-                    SUDO[client.me.id].remove(replied_user_id)
+                    SUDO.remove(replied_user_id)
                 else:
                     await message.reply(f"User {replied_user_id} is not in sudoers list.")
             else:
@@ -966,7 +966,7 @@ async def remove_from_sudo(client, message):
                         {"$pull": {"SUDOERS": target_user_id}}
                     )
                     await message.reply(f"User {target_user_id} has been removed from sudoers list.")
-                    SUDO[client.me.id].remove(target_user_id)
+                    SUDO.remove(target_user_id)
                 else:
                     await message.reply(f"User {target_user_id} is not in sudoers list.")
             except ValueError:

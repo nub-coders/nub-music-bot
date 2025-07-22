@@ -67,9 +67,9 @@ async def main():
         clients["call_py"] = call_py
         clients["bot"] = bot
         user_data = user_sessions.find_one({"bot_id": client.me.id})
-        SUDO[client.me.id] = users_data.get("SUDOERS", [])
-        AUTH[client.me.id] = user_data.get('auth_users', {})
-        BLOCK[client.me.id] = user_data.get('busers', {})
+        SUDO = users_data.get("SUDOERS", [])
+        AUTH = user_data.get('auth_users', {})
+        BLOCK = user_data.get('busers', {})
         await call_py.start()
         await bot.start()
         client_name = f"{bot.me.first_name} {bot.me.last_name or ''}".strip()
