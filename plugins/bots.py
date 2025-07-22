@@ -201,8 +201,6 @@ async def add_active_chat(client,chat_id):
 async def active_chats(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", [])
 
     is_admin = False
     if os.path.exists(admin_file):
@@ -210,11 +208,11 @@ async def active_chats(client, message):
             admin_ids = [int(line.strip()) for line in file.readlines()]
             is_admin = user_id in admin_ids
 
-    # Check permissions
+    # Check permissions using global SUDO variable
     is_authorized = (
         is_admin or
         str(OWNER_ID) == str(user_id) or
-        user_id in sudoers
+        user_id in SUDO
     )
 
     if not is_authorized:
@@ -292,10 +290,8 @@ async def seek_handler_func(client, message):
         await message.delete()
     except:
         pass
-    # Check if user is banned
-    user_data = collection.find_one({"bot_id": client.me.id})
-    busers = user_data.get('busers', [])
-    if message.from_user.id in busers:
+    # Check if user is banned using global variable
+    if message.from_user.id in BLOCK:
         return
 
     try:
@@ -445,22 +441,12 @@ async def delete_message_handler(client, message):
 async def auth_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    user_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = user_data.get("SUDOERS", [])
-    
-    # Check if user is admin
-
     
     chat_id = message.chat.id
-    auth_users = user_data.get('auth_users', {})
     
-    # Convert auth_users to dict if it's not already (for backward compatibility)
-    if not isinstance(auth_users, dict):
-        auth_users = {}
-    
-    # Initialize empty list for chat_id if it doesn't exist
-    if str(chat_id) not in auth_users:
-        auth_users[str(chat_id)] = []
+    # Use global AUTH variable and ensure chat exists
+    if str(chat_id) not in AUTH:
+        AUTH[str(chat_id)] = []
     
     if message.reply_to_message:
         replied_message = message.reply_to_message
@@ -479,16 +465,16 @@ async def auth_user(client, message):
                 not replied_message.from_user.is_self and 
                 not OWNER_ID == replied_user_id):
                 
-                # Check if user is already authorized in this chat
-                if replied_user_id not in auth_users[str(chat_id)]:
-                    auth_users[str(chat_id)].append(replied_user_id)
+                # Check if user is already authorized in this chat using global AUTH
+                if replied_user_id not in AUTH[str(chat_id)]:
+                    AUTH[str(chat_id)].append(replied_user_id)
+                    # Update database to maintain persistence
                     user_sessions.update_one(
                         {"bot_id": client.me.id},
-                        {"$set": {'auth_users': auth_users}},
+                        {"$set": {'auth_users': AUTH}},
                         upsert=True
                     )
                     await message.reply(f"User {replied_user_id} has been authorized in this chat.")
-                    AUTH.setdefault[str(chat_id)].append(replied_user_id)
                 else:
                     await message.reply(f"User {replied_user_id} is already authorized in this chat.")
             else:
@@ -501,16 +487,16 @@ async def auth_user(client, message):
         if len(command_parts) > 1:
             try:
                 user_id_to_auth = int(command_parts[1])
-                # Check if user is already authorized in this chat
-                if user_id_to_auth not in auth_users[str(chat_id)]:
-                    auth_users[str(chat_id)].append(user_id_to_auth)
+                # Check if user is already authorized in this chat using global AUTH
+                if user_id_to_auth not in AUTH[str(chat_id)]:
+                    AUTH[str(chat_id)].append(user_id_to_auth)
+                    # Update database to maintain persistence
                     user_sessions.update_one(
                         {"bot_id": client.me.id},
-                        {"$set": {'auth_users': auth_users}},
+                        {"$set": {'auth_users': AUTH}},
                         upsert=True
                     )
                     await message.reply(f"User {user_id_to_auth} has been authorized in this chat.")
-                    AUTH.setdefault[str(chat_id)].append(user_id_to_auth)
                 else:
                     await message.reply(f"User {user_id_to_auth} is already authorized in this chat.")
             except ValueError:
@@ -589,8 +575,6 @@ async def unauth_user(client, message):
 async def block_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", [])
 
     is_admin = False
     if os.path.exists(admin_file):
@@ -598,21 +582,17 @@ async def block_user(client, message):
             admin_ids = [int(line.strip()) for line in file.readlines()]
             is_admin = user_id in admin_ids
 
-    # Check permissions
+    # Check permissions using global SUDO variable
     is_authorized = (
         is_admin or
         str(OWNER_ID) == str(user_id) or
-        user_id in sudoers
+        user_id in SUDO
     )
 
     if not is_authorized:
         return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
     # Check if the message is a reply
-
-
-    user_data = collection.find_one({"bot_id": client.me.id})
-    busers = user_data.get('busers', []) if user_data else []
     if message.reply_to_message:
         replied_message = message.reply_to_message
         # If the replied message is from a user (and not from the bot itself)
@@ -626,13 +606,15 @@ async def block_user(client, message):
                      return await message.reply(f"**MF\n\nYou can't block my owner.**")
             # Check if the replied user is the same as the current chat (group) id
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self and not OWNER_ID == replied_user_id:
-                if not replied_user_id in busers:
+                if replied_user_id not in BLOCK:
+                    BLOCK.append(replied_user_id)
+                    # Update database to maintain persistence
                     collection.update_one({"bot_id": client.me.id},
                                         {"$push": {'busers': replied_user_id}},
                                         upsert=True)
+                    await message.reply(f"User {replied_user_id} has been added to blocklist.")
                 else:
                    return await message.reply(f"User {replied_user_id} already in the blocklist.")
-                await message.reply(f"User {replied_user_id} has been added to blocklist.")
                 
             else:
                 await message.reply("You cannot block yourself or a anonymous user")
@@ -643,16 +625,18 @@ async def block_user(client, message):
         command_parts = message.text.split()
         if len(command_parts) > 1:
             try:
-                user_id = int(command_parts[1])
-                # Block the user with the provided user ID
-                if not user_id in busers:
+                user_id_to_block = int(command_parts[1])
+                # Block the user with the provided user ID using global BLOCK
+                if user_id_to_block not in BLOCK:
+                    BLOCK.append(user_id_to_block)
+                    # Update database to maintain persistence
                     collection.update_one({"bot_id": client.me.id},
-                                        {"$push": {'busers': user_id}},
+                                        {"$push": {'busers': user_id_to_block}},
                                         upsert=True
                                     )
+                    await message.reply(f"User {user_id_to_block} has been added to blocklist.")
                 else:
-                   return await message.reply(f"User {user_id} already in the blocklist.")
-                await message.reply(f"User {user_id} has been added to blocklist.")
+                   return await message.reply(f"User {user_id_to_block} already in the blocklist.")
             except ValueError:
                 await message.reply("Please provide a valid user ID.")
         else:
@@ -663,10 +647,6 @@ async def reboot_handler(client: Client, message: Message):
     user_id = message.from_user.id
     admin_file = f"{ggg}/admin.txt"
 
-    # MongoDB: Fetch sudoers list
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", []) if users_data else []
-
     # Admin file check
     is_admin = False
     if os.path.exists(admin_file):
@@ -674,11 +654,11 @@ async def reboot_handler(client: Client, message: Message):
             admin_ids = [int(line.strip()) for line in file.readlines()]
             is_admin = user_id in admin_ids
 
-    # Authorization check
+    # Authorization check using global SUDO variable
     is_authorized = (
         is_admin or
         str(OWNER_ID) == str(user_id) or
-        user_id in sudoers
+        user_id in SUDO
     )
 
     if not is_authorized:
