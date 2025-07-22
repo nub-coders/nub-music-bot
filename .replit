@@ -3,6 +3,7 @@ run = "node index.js"
 
 [nix]
 channel = "stable-24_05"
+packages = ["cacert", "cargo", "file", "freetype", "glibcLocales", "libGL", "libiconv", "libmediainfo", "libuv", "rustc", "xcodebuild", "zlib"]
 
 [deployment]
 run = ["sh", "-c", "node index.js"]
