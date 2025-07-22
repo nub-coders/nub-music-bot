@@ -48,6 +48,24 @@ from pyrogram.errors import (
     RPCError,
 )
 
+
+temporary = {}
+active = []
+playing = {}
+queues = {}
+clients = {}
+played = {}
+linkage = {}
+conversations = {}
+connector = {}
+songs_client = {}
+owners = {}
+spam_chats = []
+broadcasts = {}
+broadcast_message = {}
+SUDO = []
+AUTH = {}
+BLOCK = {}
 # Replace with your actual API ID and API hash from my.telegram.org                     
 async def handle_disconnect(client, retries=5, delay=5):
     """Handles disconnects by attempting to reconnect with retries."""
