@@ -39,6 +39,22 @@ from config import *
 from fonts import *
 from tools import *
 
+async def end(client, update):
+    """Handle stream end event"""
+    chat_id = update.chat_id
+    logger.info(f"Stream ended in chat {chat_id}")
+    await dend(clients['bot'], type('obj', (object,), {'chat': type('obj', (object,), {'id': chat_id})})(), chat_id)
+
+async def hd_stream_closed_kicked(client, update):
+    """Handle voice chat closed or kicked events"""
+    chat_id = update.chat_id
+    logger.info(f"Voice chat closed or kicked in chat {chat_id}")
+    await remove_active_chat(clients['bot'], chat_id)
+    if chat_id in playing:
+        playing[chat_id].clear()
+    if chat_id in queues:
+        queues[chat_id].clear()
+
 # Clients will be passed as parameter instead of imported
 # Get the logger
 logger = logging.getLogger("pyrogram")
@@ -1440,6 +1456,59 @@ def currently_playing(client, message):
 
 
 
+async def join_call(message, title, yt_link, chat, by, duration, mode, thumb, video_url=None):
+    """Join voice call and start streaming"""
+    try:
+        chat_id = chat.id
+        
+        # Use video_url if available, otherwise fallback to yt_link
+        stream_url = video_url if video_url else yt_link
+        
+        # Set audio flags based on mode
+        audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
+        
+        # Create MediaStream with the appropriate URL
+        await call_py.play(
+            chat_id,
+            MediaStream(
+                stream_url,
+                AudioQuality.HIGH,
+                VideoQuality.HD_720p,
+                video_flags=audio_flags,
+                ytdlp_parameters='--cookies-from-browser chrome',
+            ),
+        )
+        
+        # Update playing status and timestamp
+        playing[chat_id] = {
+            "message": message,
+            "title": title,
+            "yt_link": yt_link,
+            "video_url": video_url,
+            "chat": chat,
+            "by": by,
+            "duration": duration,
+            "mode": mode,
+            "thumb": thumb
+        }
+        played[chat_id] = int(time.time())
+        
+        # Add current time to database for statistics
+        collection.update_one(
+            {"bot_id": message._client.me.id},
+            {"$push": {"dates": datetime.datetime.now()}},
+            upsert=True
+        )
+        
+        logger.info(f"Started streaming in chat {chat_id}: {title}")
+        
+    except Exception as e:
+        logger.error(f"Error in join_call: {e}")
+        # Clean up on error
+        if chat_id in playing:
+            playing[chat_id].clear()
+        await remove_active_chat(message._client, chat_id)
+
 async def dend(client, update, channel_id= None):
     # Enhanced input validation
     try:
@@ -1461,7 +1530,8 @@ async def dend(client, update, channel_id= None):
                 next_song['by'], 
                 next_song['duration'], 
                 next_song['mode'], 
-                next_song['thumb'])
+                next_song['thumb'],
+                next_song.get('video_url'))  # Pass video_url from queue
         else:
             logger.info(f"Song queue for chat {chat_id} is empty.")
             await client.leave_call(chat_id)
@@ -1813,6 +1883,7 @@ async def play_handler_func(client, message):
         title,
         client,
         youtube_link,
+        video_url if not media_info else None,  # Pass video_url for YouTube content
         target_chat,
         by,
         duration,
@@ -2187,6 +2258,7 @@ async def put_queue(
     title,
     client,
     yt_link,
+    video_url,
     chat,
     by,
     duration,
@@ -2203,6 +2275,7 @@ forceplay = False):
         "duration": duration,
         "mode": audio_flags,
         "yt_link": yt_link,
+        "video_url": video_url,  # Store video_url parameter
         "chat": chat,
         "by": by,
         "session":client,
@@ -2506,7 +2579,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             except:
                 pass
             await join_call(next['message'],
- next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
+ next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('video_url')
 )
          else:
             await clients['call_py'].leave_call(chat_id)
@@ -2617,7 +2690,7 @@ async def skip_handler_func(client, message):
           await call_py.pause(message.chat.id)
        except:
           pass
-       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
+       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('video_url')
 )
     else:
        await call_py.leave_call(message.chat.id)
