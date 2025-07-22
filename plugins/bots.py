@@ -1456,58 +1456,7 @@ def currently_playing(client, message):
 
 
 
-async def join_call(message, title, yt_link, chat, by, duration, mode, thumb, video_url=None):
-    """Join voice call and start streaming"""
-    try:
-        chat_id = chat.id
-        
-        # Use video_url if available, otherwise fallback to yt_link
-        stream_url = video_url if video_url else yt_link
-        
-        # Set audio flags based on mode
-        audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
-        
-        # Create MediaStream with the appropriate URL
-        await call_py.play(
-            chat_id,
-            MediaStream(
-                stream_url,
-                AudioQuality.HIGH,
-                VideoQuality.HD_720p,
-                video_flags=audio_flags,
-                ytdlp_parameters='--cookies-from-browser chrome',
-            ),
-        )
-        
-        # Update playing status and timestamp
-        playing[chat_id] = {
-            "message": message,
-            "title": title,
-            "yt_link": yt_link,
-            "video_url": video_url,
-            "chat": chat,
-            "by": by,
-            "duration": duration,
-            "mode": mode,
-            "thumb": thumb
-        }
-        played[chat_id] = int(time.time())
-        
-        # Add current time to database for statistics
-        collection.update_one(
-            {"bot_id": message._client.me.id},
-            {"$push": {"dates": datetime.datetime.now()}},
-            upsert=True
-        )
-        
-        logger.info(f"Started streaming in chat {chat_id}: {title}")
-        
-    except Exception as e:
-        logger.error(f"Error in join_call: {e}")
-        # Clean up on error
-        if chat_id in playing:
-            playing[chat_id].clear()
-        await remove_active_chat(message._client, chat_id)
+# Import join_call function from tools.py
 
 async def dend(client, update, channel_id= None):
     # Enhanced input validation
