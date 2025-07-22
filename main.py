@@ -68,9 +68,9 @@ async def main():
         clients["bot"] = bot
         
         # Initialize global variables from database
-        await bot.start()
-        user_data = user_sessions.find_one({"bot_id": bot.me.id})
-        bot_data = collection.find_one({"bot_id": bot.me.id})
+        await call_py.start() await bot.start() user_data = 
+        user_sessions.find_one({"bot_id": bot.me.id}) bot_data = 
+        collection.find_one({"bot_id": bot.me.id})
         
         # Update global variables
         SUDO.clear()
@@ -82,7 +82,6 @@ async def main():
         BLOCK.clear()
         BLOCK.extend(bot_data.get('busers', []) if bot_data else [])
         
-        await call_py.start()
         client_name = f"{bot.me.first_name} {bot.me.last_name or ''}".strip()
         logger.info(f"Bot authorized successfully! 🎉 Authorized as: {client_name}")
         user_sessions.update_one(
