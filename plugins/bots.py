@@ -1677,15 +1677,18 @@ async def play_handler_func(client, message):
                 thumbnail = await client.download_media(media.thumbs[0].file_id)  
         elif media_msg.document:  
             doc = media_msg.document  
-            for attr in doc.attributes:  
-                if isinstance(attr, DocumentAttributeVideo):  
-                    media_type = "video"  
-                    title = doc.file_name or "Telegram Video"  
-                    duration = attr.duration  
-                elif isinstance(attr, DocumentAttributeAudio):  
-                    media_type = "audio"  
-                    title = doc.file_name or "Telegram Audio"  
-                    duration = attr.duration  
+    
+    # In Pyrogram, check the mime_type directly
+            if doc.mime_type:
+                if doc.mime_type.startswith("video/"):
+                    media_type = "video"
+                    title = doc.file_name or "Telegram Video"
+                    duration = getattr(doc, 'duration', 0)  # duration might not always be available
+            elif doc.mime_type.startswith("audio/"):
+                     media_type = "audio"
+                     title = doc.file_name or "Telegram Audio"
+                     duration = getattr(doc, 'duration', 0)
+
 
             if media_type and doc.thumbs:  
                 thumbnail = await client.download_media(f"{user_dir}/{doc}".thumbs[0].file_id)  
