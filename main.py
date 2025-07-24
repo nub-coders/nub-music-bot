@@ -68,9 +68,10 @@ async def main():
         clients["bot"] = bot
         
         # Initialize global variables from database
-        await call_py.start() await bot.start() user_data = 
-        user_sessions.find_one({"bot_id": bot.me.id}) bot_data = 
-        collection.find_one({"bot_id": bot.me.id})
+        await call_py.start()
+        await bot.start() 
+        user_data = user_sessions.find_one({"bot_id": bot.me.id})
+        bot_data = collection.find_one({"bot_id": bot.me.id})
         
         # Update global variables
         SUDO.clear()
