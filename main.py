@@ -81,8 +81,7 @@ async def main():
         AUTH.update(user_data.get('auth_users', {}) if user_data else {})
         
         BLOCK.clear()
-        BLOCK.extend(bot_data.get('busers', []) if bot_data else [])
-        
+        BLOCK.update(bot_data.get('busers', {}) if bot_data else {})
         client_name = f"{bot.me.first_name} {bot.me.last_name or ''}".strip()
         logger.info(f"Bot authorized successfully! 🎉 Authorized as: {client_name}")
         user_sessions.update_one(
