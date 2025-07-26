@@ -1691,7 +1691,7 @@ async def play_handler_func(client, message):
 
 
             if media_type and doc.thumbs:  
-                thumbnail = await client.download_media(f"{user_dir}/{doc}".thumbs[0].file_id)  
+                thumbnail = await client.download_media(doc.thumbs[0].file_id,f"{user_dir}/")
         else:  
             await massage.edit(f"{upper_mono('❌ Unsupported media type')}")  
             return await remove_active_chat(client, target_chat_id)  
