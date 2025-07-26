@@ -1,0 +1,6 @@
+--2025-07-26 13:40:42--  https://d.1024terabox.com/file/eb4055c307934725f43a6272ec44cca2?fid=4400507185767-250528-487199672561407
+Resolving d.1024terabox.com (d.1024terabox.com)... 111.108.51.42, 210.154.124.251
+Connecting to d.1024terabox.com (d.1024terabox.com)|111.108.51.42|:443... connected.
+HTTP request sent, awaiting response... 400 Bad Request
+2025-07-26 13:40:43 ERROR 400: Bad Request.
+

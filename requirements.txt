@@ -21,7 +21,7 @@ py-tgcalls
 cryptg
 #pyrofork
 #https://devgagan.in/wp-content/uploads/2024/06/ggnpyro.zip
-kurigram==2.2.5
+kurigram
 Telethon
 TgCrypto
 pymongo
