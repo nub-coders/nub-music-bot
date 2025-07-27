@@ -369,8 +369,7 @@ async def seek_handler_func(client, message):
 
             # Seek to specified position
             to_seek = format_duration(total_seek)
-            # Use video_url if available, otherwise fallback to yt_link
-            stream_url = current_song.get('video_url') or current_song['yt_link']
+            stream_url = current_song['yt_link']
             await call_py.play(
                 message.chat.id,
                 MediaStream(
@@ -1457,8 +1456,8 @@ async def dend(client, update, channel_id= None):
                 next_song['by'], 
                 next_song['duration'], 
                 next_song['mode'], 
-                next_song['thumb'],
-                next_song.get('video_url'))  # Pass video_url from queue
+                next_song['thumb']
+            )
         else:
             logger.info(f"Song queue for chat {chat_id} is empty.")
             await client.leave_call(chat_id)
@@ -1728,7 +1727,7 @@ async def play_handler_func(client, message):
     elif len(input_text) == 2:  
         search_query = input_text[1]  
 
-        title, duration, youtube_link, video_url, thumbnail, channel_name, views, video_id = handle_youtube(search_query,user_dir)
+        title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query,user_dir)
         if not youtube_link:  
             try:  
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")  
@@ -1813,7 +1812,6 @@ async def play_handler_func(client, message):
         title,
         client,
         youtube_link,
-        video_url if not media_info else None,  # Pass video_url for YouTube content
         target_chat,
         by,
         duration,
@@ -2130,7 +2128,6 @@ def handle_youtube_ytdlp(argument):
                 info.get('title', 'Title not found'),
                 format_duration(info.get('duration', 0)),
                 youtube_link,
-                video_url,
                 thumbnail,
                 info.get('uploader', 'Channel not found'),
                 info.get('view_count', 'N/A'),
@@ -2168,7 +2165,7 @@ def handle_youtube(argument, directory):
     Falls back to yt-dlp if the YouTube API fails.
     
     Returns:
-        tuple: (title, duration, youtube_link, video_url, thumbnail, channel_name, views, video_id)
+        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
     """
     # First try using the YouTube Data API
     
@@ -2177,7 +2174,7 @@ def handle_youtube(argument, directory):
     # If both methods fail, return error values
     if not result:
         logger.error("Both YouTube API and yt-dlp failed")
-        return ("Error", "00:00", None, None, None, None, None, None)
+        return ("Error", "00:00", None, None, None, None, None)
     
     return result
 
@@ -2188,7 +2185,6 @@ async def put_queue(
     title,
     client,
     yt_link,
-    video_url,
     chat,
     by,
     duration,
@@ -2205,7 +2201,6 @@ forceplay = False):
         "duration": duration,
         "mode": audio_flags,
         "yt_link": yt_link,
-        "video_url": video_url,  # Store video_url parameter
         "chat": chat,
         "by": by,
         "session":client,
@@ -2507,7 +2502,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             except:
                 pass
             await join_call(next['message'],
- next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('video_url')
+ next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
 )
          else:
             await clients['call_py'].leave_call(chat_id)
@@ -2618,7 +2613,7 @@ async def skip_handler_func(client, message):
           await call_py.pause(message.chat.id)
        except:
           pass
-       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('video_url')
+       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
 )
     else:
        await call_py.leave_call(message.chat.id)
