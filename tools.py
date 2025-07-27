@@ -229,8 +229,7 @@ def get_video_details(video_id):
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat': False,
-            'cookiesfrombrowser': ('chrome',)
+            'extract_flat':True,
         }
 
         # Try YouTube URL first
@@ -280,8 +279,7 @@ def get_video_details(video_id):
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
-                'extract_flat': False,
-                'cookiesfrombrowser': ('chrome',)
+                'extract_flat': True,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
