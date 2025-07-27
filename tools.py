@@ -1140,9 +1140,6 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
     """Join voice call and start streaming"""
     try:
         chat_id = chat.id
-        
-        stream_url = youtube_link
-        
         # Set audio flags based on mode
         audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
         position = len(queues.get(chat_id)) if queues.get(chat_id) else 0
@@ -1151,7 +1148,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         await clients["call_py"].play(
             chat_id,
             MediaStream(
-                stream_url,
+                youtube_link,
                 AudioQuality.HIGH,
                 VideoQuality.HD_720p,
                 video_flags=audio_flags,

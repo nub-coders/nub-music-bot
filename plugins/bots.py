@@ -1727,7 +1727,7 @@ async def play_handler_func(client, message):
     elif len(input_text) == 2:  
         search_query = input_text[1]  
 
-        title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query,user_dir)
+        title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query)
         if not youtube_link:  
             try:  
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")  
@@ -1900,63 +1900,6 @@ def extract_video_id(url):
             return match.group(1)
     return None
 
-def handle_youtube_api(argument):
-    """Get YouTube video information using the YouTube Data API"""
-    try:
-        youtube = build('youtube', 'v3', developerKey=API_KEY)
-        
-        # Determine if input is URL or search query
-        video_id = extract_video_id(argument)
-
-        if not video_id:
-            # Perform search if it's not a URL
-            search_response = youtube.search().list(
-                q=argument,
-                part='id',
-                maxResults=1,
-                type='video'
-            ).execute()
-
-            if not search_response.get('items'):
-                return None
-
-            video_id = search_response['items'][0]['id']['videoId']
-
-        # Get video details
-        video_response = youtube.videos().list(
-            part='snippet,contentDetails,statistics',
-            id=video_id
-        ).execute()
-
-        if not video_response.get('items'):
-            return None
-
-        item = video_response['items'][0]
-        snippet = item['snippet']
-        stats = item['statistics']
-        details = item['contentDetails']
-
-        # Get best available thumbnail
-        thumbnails = snippet.get('thumbnails', {})
-        thumbnail = thumbnails.get('maxres', thumbnails.get('high',
-            thumbnails.get('medium', thumbnails.get('default', {}))))['url']
-
-        return (
-            snippet.get('title', 'Title not found'),
-            format_duration(details.get('duration', 'PT0S')),
-            f'https://youtu.be/{video_id}',
-            thumbnail,
-            snippet.get('channelTitle', 'Channel not found'),
-            stats.get('viewCount', 'N/A'),
-            video_id
-        )
-
-    except HttpError as e:
-        logger.warning(f"API Error: {e.resp.status} {e._get_reason()}")
-        return None
-    except Exception as e:
-        logger.warning(f"Google API error: {str(e)}")
-        return None
 
 
 
@@ -1995,88 +1938,6 @@ import os
 import yt_dlp
 import os
 
-def download_instagram_reel(url, output_path):
-    """
-    Download an Instagram Reel using yt-dlp with browser cookies.
-
-    Args:
-        url (str): URL of the Instagram Reel.
-        output_path (str, optional): Directory to save the downloaded Reel.
-                                     Defaults to the current directory.
-    """
-    # Set default output path to current directory if not specified
-    if output_path is None:
-        output_path = os.getcwd()
-
-    # Ensure output directory exists
-    os.makedirs(output_path, exist_ok=True)
-
-    # Configure yt-dlp options
-    ydl_opts = {
-        'proxy':'socks5://localhost:9050',
-        'format': 'mp4',
-        'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
-        'nooverwrites': True,
-        'no_color': True,
-        'ignoreerrors': False,
-    }
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract video info to determine filename before downloading
-            info_dict = ydl.extract_info(url, download=False)
-            file_path = ydl.prepare_filename(info_dict)
-
-            # Download the Reel
-            ydl.download([url])
-
-        return file_path
-
-    except Exception as e:
-        return (f"Error downloading Reel: {e}")
-
-
-def get_instagram_reel_details(reel_url, directory):
-    """
-    Extract details from an Instagram Reel using yt_dlp with Chrome browser cookies.
-    
-    Args:
-        reel_url (str): URL of the Instagram Reel
-    
-    Returns:
-        list: Formatted Reel details
-    """
-    # yt-dlp configuration with simplified cookie extraction
-    ydl_opts = {
-        'no_warnings': False,
-        'quiet': False,
-        'extract_flat': False,
-        'no_color': True,
-        'proxy':'socks5://localhost:9050'
-    }
-
-    try:
-        # Create yt-dlp extractor
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract video info
-            info_dict = ydl.extract_info(reel_url, download=False)
-            
-            # Format details as specified
-            reel_details = (
-                truncate_description(info_dict.get('title')) or truncate_description(info_dict.get('description', '')),  # Description (truncated)
-                format_duration(info_dict.get('duration')),  # Duration
-                format_duration(info_dict.get('url')),  # Duration
-                info_dict.get('thumbnail', ''),  # Thumbnail URL
-                info_dict.get('channel', ''),  # Channel
-                None,  # Placeholder for additional info
-                None  # Placeholder for additional info
-            )
-            
-            return reel_details
-
-    except Exception as e:
-        print(f"Error extracting Reel details: {e}")
-        return None
 
 
 def handle_youtube_ytdlp(argument):
@@ -2123,23 +1984,8 @@ import re
 from urllib.parse import urlparse
 
 
-def is_url_and_not_youtube_regex(url_string):
-       regex = r"^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$"
-       pattern = re.compile(regex)
 
-       try:
-           if pattern.search(url_string): #Verify URL
-               result = urlparse(url_string)  # Parse for domain
-               is_youtube = (
-            "youtube.com" in result.netloc or
-            "youtu.be" in result.netloc
-        )  #
-               return not is_youtube #Return value
-           else:
-               return False
-       except:
-           return False
-def handle_youtube(argument, directory):
+def handle_youtube(argument):
     """
     Main function to get YouTube video information.
     Falls back to yt-dlp if the YouTube API fails.
