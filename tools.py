@@ -1121,8 +1121,7 @@ async def end(client, update):
           next_song['by'], 
           next_song['duration'], 
           next_song['mode'], 
-          next_song['thumb'],
-          next_song.get('video_url')
+          next_song['thumb']
       )
     else:
       logger.info(f"Song queue for chat {update.chat_id} is empty.")
@@ -1137,13 +1136,12 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 
-async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, video_url=None):
+async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb):
     """Join voice call and start streaming"""
     try:
         chat_id = chat.id
         
-        # Use video_url if available, otherwise fallback to youtube_link
-        stream_url = video_url if video_url else youtube_link
+        stream_url = youtube_link
         
         # Set audio flags based on mode
         audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
@@ -1166,7 +1164,6 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             "message": message,
             "title": title,
             "yt_link": youtube_link,
-            "video_url": video_url,
             "chat": chat,
             "by": by,
             "duration": duration,
