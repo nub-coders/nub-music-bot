@@ -19,7 +19,7 @@ aiofiles
 Pillow
 py-tgcalls
 cryptg
-pyrofork
+pyrotgfork
 #https://devgagan.in/wp-content/uploads/2024/06/ggnpyro.zip
 #kurigram
 Telethon
