@@ -1676,7 +1676,7 @@ async def play_handler_func(client, message):
                 thumbnail = await client.download_media(media.thumbs[0].file_id)  
         elif media_msg.document:  
             doc = media_msg.document  
-    
+            media = media_msg.document
     # In Pyrogram, check the mime_type directly
             if doc.mime_type:
                 if doc.mime_type.startswith("video/"):
