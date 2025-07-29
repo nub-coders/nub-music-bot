@@ -9,7 +9,7 @@ import asyncio
 import math
 import os
 import shlex
-from pyrogram.errors.exceptions import InviteHashExpired , ChannelPrivate ,GroupcallForbidden
+from pyrogram.errors.exceptions import InviteHashExpired , ChannelPrivate 
 from typing import Tuple
 from pytgcalls import idle, PyTgCalls
 from pytgcalls.types import AudioQuality
@@ -1217,9 +1217,9 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
     except NoActiveGroupCall:
         await clients["bot"].send_message(chat.id, "ERROR: No active group calls")
         return await remove_active_chat(chat.id)
-    except GroupcallForbidden:
-        await clients["bot"].send_message(chat.id, "ERROR: Telegram internal server error")
-        return await remove_active_chat(chat.id)
+   # except GroupcallForbidden:
+    #    await clients["bot"].send_message(chat.id, "ERROR: Telegram internal server error")
+     #   return await remove_active_chat(chat.id)
     except Exception as e:
         await clients["bot"].send_message(chat.id, f"ERROR: {e}")
         return await remove_active_chat(chat.id)
