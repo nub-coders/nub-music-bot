@@ -17,7 +17,6 @@ from pyrogram.errors import (
     FloodWait,
     InviteHashExpired,
     ChannelPrivate,
-    GroupcallForbidden,
     UserBlocked,
     PeerIdInvalid,
     MessageDeleteForbidden
