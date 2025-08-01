@@ -1258,3 +1258,27 @@ PLANS = {
     "standard": {"amount": 6900, "duration": 20, "merit": 0},   # ₹69 for 20 days
     "pro": {"amount": 17900, "duration": 60, "merit": 2}        # ₹180 for 60 days
 }
+
+# Appropriate tagall messages for when no text is provided
+TAGALL = [
+    "🎉 Hey everyone! Let's get this party started!",
+    "📢 Attention all members! Something exciting is happening here!",
+    "🌟 Good vibes only! Hope everyone is having a great day!",
+    "💫 Just wanted to say hello to all our amazing members!",
+    "🎵 Music brings us together! What's everyone listening to?",
+    "🚀 Ready to rock and roll? Let's make some noise!",
+    "✨ Spreading positive energy to all our wonderful members!",
+    "🎊 Celebration time! Thanks for being part of this awesome community!",
+    "🌈 Hope everyone is doing fantastic today!",
+    "🎭 Time for some fun! What's everyone up to?",
+    "🎨 Creativity flows here! Share your thoughts!",
+    "🌺 Sending good wishes to all our lovely members!",
+    "🎪 Welcome to our amazing community space!",
+    "🌟 You all make this place special! Thank you!",
+    "🎯 Let's make today awesome together!",
+    "🎈 Balloon drop of positivity for everyone!",
+    "🌻 Sunshine and smiles for all our members!",
+    "🎼 Harmony and happiness to everyone here!",
+    "🌙 Wishing everyone a wonderful time!",
+    "⭐ You're all stars in this community!"
+]

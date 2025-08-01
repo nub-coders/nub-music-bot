@@ -255,8 +255,12 @@ async def mentionall(client, message):
     chat_id = message.chat.id
     direp = message.reply_to_message
     args = get_arg(message)
+    
+    # If no message or reply provided, use random message from TAGALL
     if not direp and not args:
-        return await message.reply("**Give a message or reply to any message!**")
+        import random
+        from tools import TAGALL
+        args = random.choice(TAGALL)
 
     spam_chats.append(chat_id)
     usrnum = 0
