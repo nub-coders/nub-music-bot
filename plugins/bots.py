@@ -3612,6 +3612,8 @@ from pyrogram import Client, filters
 @Client.on_message(filters.command("setwelcome") & filters.private)
 async def set_welcome_handler(client, message):
     sender_id = message.from_user.id
+    session_name = f'user_{client.me.id}'
+    user_dir = f"{ggg}/{session_name}"
     try:
         if not sender_id == OWNER_ID:
            return await message.reply_text("Only bot owner is allowed to perform this command")
