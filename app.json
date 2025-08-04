@@ -44,7 +44,7 @@
     },
     "CHANNEL": {
       "description": "Your updates channel username without @",
-      "value": "nub_coders_updates",
+      "value": "nub_coders",
       "required": false
     },
     "MONGODB_URI": {

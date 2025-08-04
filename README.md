@@ -39,7 +39,7 @@ Required:
 
 Optional:
 - `GROUP`: Telegram group username (default: "nub_coder_s")
-- `CHANNEL`: Telegram channel username (default: "nub_coders_updates")
+- `CHANNEL`: Telegram channel username (default: "nub_coders")
 - `LOGGER_ID`: Logging group chat ID
 
 **Option 2: Environment Variables (for deployment)**
