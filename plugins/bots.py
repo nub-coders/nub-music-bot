@@ -1832,7 +1832,6 @@ async def play_handler_func(client, message):
                 InlineKeyboardButton(text="▢", callback_data=f"{'c' if channel_mode else ''}end"),
             ],
         [
-[                                                                                          
             InlineKeyboardButton(
                 text="✖ Close", 
                 callback_data="close"
