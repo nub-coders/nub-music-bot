@@ -1187,9 +1187,6 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             ],
             [
                 InlineKeyboardButton(
-                    text=f"{smallcap('Add to group')}", url=f"https://t.me/{clients['bot'].me.username}?startgroup=true"
-                ),
-                InlineKeyboardButton(
                     text="✖ Close", callback_data="close"
                 )
             ],
