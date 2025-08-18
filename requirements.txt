@@ -37,4 +37,3 @@ ffmpeg
 uvloop
 reportlab
 aiohttp
-pyrogram
