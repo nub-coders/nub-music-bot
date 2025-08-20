@@ -12,6 +12,7 @@ from pyrogram.errors.exceptions import SessionRevoked, UserDeactivatedBan, AuthK
 # Local modules
 from tools import *
 from config import *
+from version_checker import check_and_update_ytdlp
 
 # Initialize clients dictionary
 # Configure logging
@@ -34,6 +35,10 @@ os.makedirs(cache_dir, exist_ok=True)
 
 async def main():
     logger.info("Starting bot initialization...")
+    
+    # Check and update yt-dlp if needed
+    await check_and_update_ytdlp()
+    
     # Create and start the bot client
     try:
         bot = Client("bot",
