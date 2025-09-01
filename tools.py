@@ -230,6 +230,7 @@ def get_video_details(video_id):
             'quiet': True,
             'no_warnings': True,
             'extract_flat':True,
+       "cookiesfrombrowser": ("chrome",),
         }
 
         # Try YouTube URL first
