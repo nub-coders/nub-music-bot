@@ -7,3 +7,6 @@ packages = ["cacert", "cargo", "file", "freetype", "glibcLocales", "libGL", "lib
 
 [deployment]
 run = ["sh", "-c", "node index.js"]
+
+[agent]
+expertMode = true
