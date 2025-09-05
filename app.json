@@ -56,6 +56,11 @@
       "description": "chat id of the logger group",
       "value": "",
       "required": false
+    },
+    "NUB_YTDLP_API": {
+      "description": "get this api from @ytdlp_api_bot",
+      "value": "",
+      "required": false
     }
   },
   "buildpacks": [
