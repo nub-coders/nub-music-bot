@@ -278,57 +278,10 @@ def get_video_details(video_id):
             return details
 
     except (yt_dlp.utils.ExtractorError, yt_dlp.utils.DownloadError) as youtube_error:
-        # If YouTube extraction fails, try Instagram
-        try:
-            # Construct Instagram Reel URL
-            instagram_url = f"https://www.instagram.com/reel/{video_id}/"
-            
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': True,
-            }
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extract Instagram Reel info
-                info = ydl.extract_info(instagram_url, download=False)
-
-                # Process upload date
-                upload_date = parse_and_format_date(info.get('upload_date'))
-
-                # Process duration
-                duration = 'N/A'
-                if info.get('duration'):
-                    try:
-                        duration = str(
-                            datetime.datetime.fromtimestamp(
-                                info.get('duration')
-                            ).strftime('%H:%M:%S')
-                        )
-                    except (ValueError, TypeError):
-                        duration = 'N/A'
-
-                # Prepare Instagram details
-                details = {
-                    'title': info.get('title', 'N/A'),
-                    'thumbnail': info.get('thumbnail', 'N/A'),
-                    'duration': duration,
-                    'view_count': info.get('view_count', 0),
-                    'like_count': info.get('like_count', 0),
-                    'channel_name': info.get('uploader', 'N/A'),
-                    'subscriber_count': 0,
-                    'upload_date': upload_date,
-                    'video_url': instagram_url,
-                    'platform': 'Instagram'
-                }
-
-                return details
-
-        except Exception as instagram_error:
-            # If both fail, return error details
-            return {
-                'error': f"Extraction failed for both YouTube and Instagram. Original error: {youtube_error}"
-            }
+        # Return error details if YouTube extraction fails
+        return {
+            'error': f"YouTube extraction failed: {youtube_error}"
+        }
 
 import datetime
 import os
