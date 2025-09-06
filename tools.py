@@ -258,7 +258,7 @@ def get_video_details(video_id):
             # Prepare details dictionary
             details = {
                 'title': info.get('title', 'N/A'),
-                'thumbnail': info["entries"][0]["thumbnails"]
+                'thumbnail': info["entries"][0]["thumbnails"],
                 'duration': duration,
                 'view_count': info.get('view_count', 'N/A'),
                 'channel_name': info.get('uploader', 'N/A'),
