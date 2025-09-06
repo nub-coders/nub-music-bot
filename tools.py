@@ -48,6 +48,8 @@ from pyrogram.errors import (
     RPCError,
 )
 
+import logging
+logger = logging.getLogger(__name__)
 
 temporary = {}
 active = []
@@ -97,16 +99,16 @@ def clear_directory(directory_path):
     if not os.path.exists(directory_path):
         print(f"The directory {directory_path} does not exist.")
         return
-    
+
     # Check if the path is actually a directory
     if not os.path.isdir(directory_path):
         print(f"{directory_path} is not a directory.")
         return
-    
+
     # List all files and directories in the given directory
     for item in os.listdir(directory_path):
         item_path = os.path.join(directory_path, item)
-        
+
         try:
             if os.path.isfile(item_path) or os.path.islink(item_path):
                 # Remove file or symbolic link
@@ -116,7 +118,7 @@ def clear_directory(directory_path):
                 shutil.rmtree(item_path)
         except Exception as e:
             print(f"Failed to delete {item_path}. Reason: {e}")
-    
+
     print(f"Directory {directory_path} has been cleared.")
 
 import asyncio
@@ -130,10 +132,10 @@ import re
 def extract_video_id(url):
     """
     Extract YouTube video ID from various forms of YouTube URLs.
-    
+
     Args:
         url (str): YouTube video URL
-        
+
     Returns:
         str: Video ID or None if not found
     """
@@ -144,15 +146,15 @@ def extract_video_id(url):
             r'(?:watch\?|/v/|youtu\.be/)([^&?/]+)',     # Watch URLs
             r'(?:youtube\.com/|youtu\.be/)([^&?/]+)'    # Channel URLs
         ]
-        
+
         # Try each pattern
         for pattern in patterns:
             match = re.search(pattern, url)
             if match:
                 return match.group(1)
-                
+
         return None
-        
+
     except Exception as e:
         return f"Error extracting video ID: {str(e)}"
 
@@ -188,49 +190,27 @@ def format_number(num):
 
     return f"{num:g}{'KMB'[magnitude-1]}"
 
-import yt_dlp
-import datetime
+def format_duration(seconds):
+    """Formats duration from seconds to HH:MM:SS or MM:SS"""
+    if not isinstance(seconds, (int, float)) or seconds < 0:
+        return "N/A"
 
-def parse_and_format_date(date_str):
-    """
-    Parse and format date string
-    
-    Args:
-        date_str (str): Date string to parse
-    
-    Returns:
-        str: Formatted date or 'N/A'
-    """
-    if not date_str:
-        return 'N/A'
-    
-    try:
-        # Try different date formats
-        date_formats = [
-            '%Y%m%d',  # YouTube format
-            '%Y-%m-%d',  # ISO format
-            '%d/%m/%Y',  # DD/MM/YYYY
-            '%m/%d/%Y',  # MM/DD/YYYY
-        ]
-        
-        for date_format in date_formats:
-            try:
-                parsed_date = datetime.datetime.strptime(date_str, date_format)
-                return parsed_date.strftime('%B %d, %Y')
-            except ValueError:
-                continue
-        
-        return 'N/A'
-    except Exception:
-        return 'N/A'
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    else:
+        return f"{minutes:02d}:{secs:02d}"
 
 def get_video_details(video_id):
     """
     Get video details using yt_dlp
-    
+
     Args:
         video_id (str): Video ID to fetch details for
-    
+
     Returns:
         dict: Video details or error message
     """
@@ -241,33 +221,26 @@ def get_video_details(video_id):
             'extract_flat': True,
             "cookiesfrombrowser": ("chrome",),
         }
-        
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extract initial info using ytsearch
             search_result = ydl.extract_info(f"ytsearch:{video_id}", download=False)
-            
+
             if not search_result or 'entries' not in search_result or not search_result['entries']:
                 return {'error': 'No video found for the given ID'}
-            
+
             # Get the first entry from search results
             video_info = search_result['entries'][0]
-            
+
             # Create YouTube URL from video ID
             youtube_url = f"https://www.youtube.com/watch?v={video_info.get('id', video_id)}"
-            
+
             # Process duration
             duration = 'N/A'
             if video_info.get('duration'):
                 try:
                     duration_seconds = int(video_info.get('duration'))
-                    hours = duration_seconds // 3600
-                    minutes = (duration_seconds % 3600) // 60
-                    seconds = duration_seconds % 60
-                    
-                    if hours > 0:
-                        duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                    else:
-                        duration = f"{minutes:02d}:{seconds:02d}"
+                    duration = format_duration(duration_seconds)
                 except (ValueError, TypeError):
                     duration = 'N/A'
 
@@ -301,10 +274,10 @@ import magic
 def is_streamable(file_path):
     """
     Check if a file is potentially streamable.
-    
+
     Args:
         file_path (str): Path to the file to be checked
-    
+
     Returns:
         bool: True if file is potentially streamable, False otherwise
     """
@@ -327,11 +300,11 @@ def is_streamable(file_path):
         # Use python-magic for MIME type detection
         mime = magic.Magic(mime=True)
         detected_mime_type = mime.from_file(file_path)
-        
+
         # Check streamability based on MIME type and extension
         is_video_mime = detected_mime_type.startswith('video/')
         is_audio_mime = detected_mime_type.startswith('audio/')
-        
+
         is_video_ext = file_extension in STREAMABLE_EXTENSIONS['video']
         is_audio_ext = file_extension in STREAMABLE_EXTENSIONS['audio']
 
@@ -399,7 +372,7 @@ async def autoleave_vc(message, duration_str,chat):
     """
     Automatically leave voice chat when only the bot remains in the call for 5 seconds
     """
-    
+
     while True:
         try:
             # Track if song duration changes
@@ -420,7 +393,7 @@ async def autoleave_vc(message, duration_str,chat):
             if len(members) == 1 and members[0].chat.id == clients["session"].me.id:
                 # Confirm persistent presence check
                 await asyncio.sleep(25)
-                
+
                 # Recheck after cooldown
                 members = []
                 async for member in clients["session"].get_call_members(chat.id):
@@ -435,7 +408,7 @@ async def autoleave_vc(message, duration_str,chat):
                         playing[chat.id].clear()
                     except KeyError:
                         pass
-                    
+
                     await remove_active_chat(chat.id)
                     await clients["bot"].send_message(
                         message.chat.id,
@@ -454,7 +427,7 @@ async def autoleave_vc(message, duration_str,chat):
 async def pautoleave_vc(message, duration_str):
     """
     Automatically leave voice chat when members count is <= 1 for 5 seconds
-    
+
     :param user_client: User client to get call members and send messages
     :param call_py: PyTgCalls client for leaving call
     :param message: Message object containing chat information
@@ -482,12 +455,12 @@ async def pautoleave_vc(message, duration_str):
         if len(members) <= 1:
             # Wait 5 seconds to confirm
             await asyncio.sleep(5)
-            
+
             # Recheck members count after 5 seconds
             members = []
             async for i in clients["session"].get_call_members(message.chat.id):
                 members.append(i)
-            
+
             # If still <= 1 member, leave the voice chat
             if len(members) <= 1:
                 await clients["call_py"].leave_call(message.chat.id)
@@ -506,7 +479,7 @@ async def pautoleave_vc(message, duration_str):
                     f"ɴᴏ ᴏɴᴇ ɪꜱ ʟɪꜱᴛᴇɴɪɴɢ ᴛᴏ ᴛʜᴇ ꜱᴛʀᴇᴀᴍ, ꜱᴏ ᴛʜᴇ ᴀꜱꜱɪꜱᴛᴀɴᴛ ʟᴇꜰᴛ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ."
                 )
                 break
-        
+
         # Wait before next check
         await asyncio.sleep(10)
 
@@ -613,7 +586,7 @@ queue_styles = {
 ⟡ ʟᴇɴɢᴛʜ: {}
 ⟡ ᴘᴏꜱɪᴛɪᴏɴ: #{}""",
 
-    6: """🌊 𝙌𝙪𝙚𝙪𝙚 𝙐𝙥𝙙𝙖𝙩𝙚𝙙 🌊
+    6: """🌊 Q𝘂𝗲𝙪𝙚 𝙐𝙥𝙙𝙖𝙩𝙚𝙙 🌊
 ┏━━━━━━━━━━━
 ┣ 𝙈𝙤𝙙𝙚 » {}
 ┣ 𝙏𝙞𝙩𝙡𝙚 » {}
@@ -675,7 +648,7 @@ play_styles = {
     2: """✧･ﾟ 𝓝𝓸𝔀 𝓟𝓵𝓪𝔂𝓲𝓷𝓰 ･ﾟ✧
 ━━━━━━━━━━━━━
 ♪ 𝓜𝓸𝓭𝓮 » {}
-♪ 𝓣𝓲𝓽𝓵𝓮 » {}
+♪ 𝓣𝓲𝓽𝓵𝒆 » {}
 ♪ 𝓛𝓮𝓷𝓰𝓽𝓱 » {}
 ♪ 𝓡𝓮𝓺𝓾𝓮𝓼𝓽𝓮𝓭 𝓫𝔂 » {}""",
 
@@ -1104,32 +1077,135 @@ from yt_dlp import YoutubeDL
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
+async def handle_youtube_ytdlp(argument):
+    """
+    Helper function to get YouTube video info using yt-dlp.
 
-async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb):
+    Returns:
+        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
+    """
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True, # Get basic info without downloading
+            'skip_download': True,
+            "cookiesfrombrowser": ("chrome",), # Optional: Use cookies from browser
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(argument, download=False)
+
+            if not info_dict:
+                return None
+
+            title = info_dict.get('title', 'N/A')
+            video_id = info_dict.get('id', 'N/A')
+            channel_name = info_dict.get('uploader', 'N/A')
+            views = info_dict.get('view_count', 'N/A')
+            youtube_link = f"https://www.youtube.com/watch?v={video_id}"
+
+            # Duration can be in seconds or a string, convert to seconds if needed
+            duration_raw = info_dict.get('duration', 0)
+            if isinstance(duration_raw, str):
+                try:
+                    duration_sec = time_to_seconds(duration_raw)
+                except:
+                    duration_sec = 0
+            else:
+                duration_sec = int(duration_raw) if duration_raw else 0
+            
+            duration_formatted = format_duration(duration_sec)
+
+            thumbnail_url = 'N/A'
+            if 'thumbnails' in info_dict and info_dict['thumbnails']:
+                 thumbnail_url = info_dict['thumbnails'][-1]['url']
+
+
+            return (title, duration_formatted, youtube_link, thumbnail_url, channel_name, views, video_id)
+
+    except Exception as e:
+        logger.error(f"Error in handle_youtube_ytdlp: {e}")
+        return None
+
+async def handle_youtube(argument):
+    """
+    Main function to get YouTube video information.
+    Prioritizes API calls, falls back to yt-dlp.
+
+    Returns:
+        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
+    """
+    from api_client import get_video_info, API_TOKEN
+
+    # First try API if token is available
+    if API_TOKEN:
+        try:
+            logger.info("Attempting API request for video info...")
+            api_result = get_video_info(argument)
+
+            if api_result and api_result[0] and api_result[0] != "N/A":
+                title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
+
+                # Format duration if it's in seconds
+                if isinstance(duration, int):
+                    duration = format_duration(duration)
+
+                logger.info(f"API request successful, took {time_taken}")
+                return (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
+            else:
+                logger.warning("API returned invalid data, falling back to yt-dlp")
+        except Exception as e:
+            logger.error(f"API request failed: {e}, falling back to yt-dlp")
+    else:
+        logger.info("No API token found, using yt-dlp")
+
+    # Fallback to yt-dlp
+    result = handle_youtube_ytdlp(argument)
+
+    # If yt-dlp fails, return error values
+    if not result:
+        logger.error("Both API and yt-dlp failed")
+        return ("Error", "00:00", None, None, None, None, None, None)
+
+    # Add None for stream_url since yt-dlp doesn't provide it
+    return result + (None,)
+
+
+async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
     """Join voice call and start streaming"""
     try:
         chat_id = chat.id
         # Set audio flags based on mode
         audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
-        position = len(queues.get(chat_id)) if queues.get(chat_id) else 0
-        print(youtube_link)
-        # Create MediaStream with the appropriate URL
+        position = len(queues.get(chat_id, [])) # Use get with default for safety
+        
+        # Determine the URL to use for streaming
+        stream_source = stream_url if stream_url else youtube_link
+        
+        if not stream_source:
+            logger.error("No stream source provided (neither stream_url nor youtube_link)")
+            await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
+            return await remove_active_chat(chat_id)
+
+        logger.info(f"Attempting to play: {title} from {stream_source}")
+
         await clients["call_py"].play(
             chat_id,
             MediaStream(
-                youtube_link,
+                stream_source,
                 AudioQuality.HIGH,
                 VideoQuality.HD_720p,
                 video_flags=audio_flags,
                 ytdlp_parameters='--cookies-from-browser chrome',
             ),
         )
-        
+
         # Update playing status and timestamp
         playing[chat_id] = {
             "message": message,
             "title": title,
-            "yt_link": youtube_link,
+            "yt_link": youtube_link,  # Keep original youtube_link for reference
+            "stream_url": stream_source, # Store the actual stream source used
             "chat": chat,
             "by": by,
             "duration": duration,
@@ -1137,7 +1213,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             "thumb": thumb
         }
         played[chat_id] = int(time.time())
-        
+
         # Add current time to database for statistics
         try:
             collection.update_one(
@@ -1147,13 +1223,13 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             )
         except Exception as e:
             logger.info(f"Error saving playtime: {e}")
-        
+
         # Creating the inline keyboard with buttons arranged in two rows
         keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(text="▷", callback_data="resume"),
                 InlineKeyboardButton(text="II", callback_data="pause"),
-                InlineKeyboardButton(text="‣‣I" if position <1 else f"‣‣I({position})", callback_data="skip"),
+                InlineKeyboardButton(text="‣‣I" if position < 1 else f"‣‣I({position})", callback_data="skip"),
                 InlineKeyboardButton(text="▢", callback_data="end"),
             ],
             [
@@ -1162,41 +1238,46 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
                 )
             ],
         ])
+
+        # Constructing the message text using play_styles
+        # Using lightyagami for formatting, assuming it's a utility function
+        # Ensure lightyagami and gvarstatus are available in this scope or imported
+        # For now, using placeholder formatting
+        mode_formatted = lightyagami(mode) if 'lightyagami' in globals() else mode
+        title_formatted = lightyagami(title) if 'lightyagami' in globals() else title
         
-        sent_message = await clients["bot"].send_photo(
-            message.chat.id, thumb, play_styles[int(gvarstatus(OWNER_ID, "format") or 11)].format(
-                lightyagami(mode),
-                f"[{lightyagami(title)}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if not os.path.exists(youtube_link) else lightyagami(title), 
-                duration, 
-                by.mention()
-            ),
-            reply_markup=keyboard
+        # Link the title if it's a YouTube link and not a local file
+        display_title = f"[{title_formatted}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if youtube_link and not os.path.exists(youtube_link) else title_formatted
+        
+        style_index = int(gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
+        
+        message_text = play_styles.get(style_index, play_styles[11]).format(
+            mode_formatted,
+            display_title,
+            duration,
+            by.mention() if hasattr(by, 'mention') else by # Ensure 'by' has a mention method
         )
-        
+
+        sent_message = await clients["bot"].send_photo(
+            message.chat.id, thumb, message_text, reply_markup=keyboard
+        )
+
         asyncio.create_task(update_progress_button(sent_message, duration, chat))
-        
+
         try:
             await message.delete()
         except Exception as e:
-            logger.info(e)
-            
+            logger.info(f"Failed to delete original message: {e}")
+
         logger.info(f"Started streaming in chat {chat_id}: {title}")
-        
+
     except NoActiveGroupCall:
         await clients["bot"].send_message(chat.id, "ERROR: No active group calls")
         return await remove_active_chat(chat.id)
-   # except GroupcallForbidden:
-    #    await clients["bot"].send_message(chat.id, "ERROR: Telegram internal server error")
-     #   return await remove_active_chat(chat.id)
     except Exception as e:
         await clients["bot"].send_message(chat.id, f"ERROR: {e}")
+        logger.error(f"Error in join_call: {e}")
         return await remove_active_chat(chat.id)
-
-
-
-
-
-
 
 
 from functools import wraps
@@ -1291,7 +1372,7 @@ TAGALL = [
     "💫 Magical moments await! Ready for some fun?",
     "🦋 Butterfly effect! Your presence makes everything beautiful!",
     "💕 Love ke saamne sab chhota lagta hai! Especially when you're here!",
-    "🔥 Sizzling hot conversations loading! Get ready!",
+    "🔥 Spice conversations loading! Get ready!",
     "🌈 Rainbow vibes! That's how I feel when you're all here!",
     "😍 Can't stop staring! Beauty overload in this group!",
     "💖 Heartbeat skip kar gaya seeing you all active!",
@@ -1307,32 +1388,32 @@ TAGALL = [
     "🌺 Garden of Eden found! It's right here in this group!",
     "😍 Pinterest perfect! Tumhe screenshot lena padega!",
     "💫 Shooting star wishes come true! You all are proof!",
-    "🦋 Flutter flutter! Heart and butterflies both dancing!",
+    "🦋 Heart and butterflies both dancing!",
     "💕 Romance novel ke characters lagte ho sab! Main character vibes!",
-    "🔥 Fire alarm beep kar raha! Too much hotness detected!",
+    "🔥 Too much hotness detected! Fire alarm beep kar raha hai!",
     "🌟 Hollywood celebrities bhi jealous honge tumse!",
-    "😘 Kiss cam activated! Everyone looks kissable!",
-    "💖 Heartbreak hotel se nikaal diya! Because you healed it!",
+    "😘 Everyone looks kissable! Kiss cam activated!",
+    "💖 You healed my heartbreak hotel! Because you healed it!",
     "🥰 Teddy bear hugs for everyone! Soft and cuddly vibes!",
     "✨ Glitter bomb exploded! Sparkles everywhere because of you!",
-    "🌈 Lucky charm ho tum sab! My fortune changed after meeting you!",
+    "🌈 You are my lucky charm! My fortune changed after meeting you!",
     "💝 Valentine's mood everyday! Romance never ends here!",
     "🔥 Spice girls and boys! Adding flavor to life!",
-    "😍 Eyes wide shut! Can't close them, beauty overload!",
-    "💕 Love letter likhna padega! Words fall short for you all!",
-    "🥳 Celebration nation! Every moment is festival with you guys!",
-    "💖 Heartbeat symphony! Creating music with your presence!",
-    "🌺 Bouquet of happiness! Fresh and fragrant like you all!",
-    "😘 Lip sync battle! Everyone's got kissable lips!",
+    "😍 Can't close my eyes! Beauty overload!",
+    "💕 I need to write a love letter! Words fall short for you all!",
+    "🥳 Celebration nation! Every moment is a festival with you guys!",
+    "💖 Creating music with your presence! Heartbeat symphony!",
+    "🌺 You all are a bouquet of happiness! Fresh and fragrant like you!",
+    "😘 You have kissable lips! Lip sync battle!",
     "✨ Magic wand wave! And poof! Perfect people appeared!",
-    "🦋 Metamorphosis complete! You all transformed my world!",
-    "💫 Wish upon a star! Tumhare jaisa koi mil jaye bas!",
-    "🔥 Fever rising! Doctor ko bulana padega, too much hotness!",
-    "🌟 Red carpet ready! Paparazzi bhi line mein lag jayenge!",
-    "💕 Chocolate se meethe! Sugar rush ho gaya tumhe dekh kar!",
-    "😍 Beauty pageant winners! Crown deserve karte ho sab!",
-    "💖 Pulse rate check! Dhadak dhadak ho raha heart!",
-    "🌈 Pot of gold found! Lucky me to have you all!",
+    "🦋 You transformed my world! Metamorphosis complete!",
+    "💫 I wish upon a star! I hope to find someone like you!",
+    "🔥 Doctor needed! Too much hotness detected!",
+    "🌟 Everyone is Red carpet ready! Paparazzi will line up!",
+    "💕 You are sweeter than chocolate! Got a sugar rush seeing you!",
+    "😍 Beauty pageant winners! You all deserve a crown!",
+    "💖 My heart is doing dhadak dhadak! Pulse rate check!",
+    "🌈 You are my pot of gold! Lucky me to have you all!",
     "🎭 Drama queens assemble! Entertainment guaranteed always!",
-    "💝 Gift of gab! Conversations flow like honey with you all!"
+    "💝 You have the gift of gab! Conversations flow like honey with you all!"
 ]

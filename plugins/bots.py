@@ -71,7 +71,7 @@ def admin_only():
         async def wrapper(client, update):
             try:
                 logger.debug(f"Admin check initiated for {func.__name__}")
-                
+
                 # Handle both callback query and regular message
                 if isinstance(update, CallbackQuery):
                     chat_id = update.message.chat.id
@@ -85,7 +85,7 @@ def admin_only():
                     user_id = update.from_user.id if update.from_user else None
                     command = update.command[0].lower()
                     logger.debug(f"Message command '{command}' from user {user_id} in chat {chat_id}")
-                    
+
                 if not user_id:
                     linked_chat = await client.get_chat(chat_id)
                     if linked_chat.linked_chat and update.sender_chat.id == linked_chat.linked_chat.id:
@@ -97,9 +97,9 @@ def admin_only():
                     else:
                         await update.reply("⚠️ Cannot verify admin status from unknown user.", reply_to_message_id=reply_id)
                     return
-                
+
                 logger.debug("Performing admin check")
-                
+
                 # Check admin status
                 is_admin = False
                 admin_file = f"{ggg}/admin.txt"
@@ -109,26 +109,26 @@ def admin_only():
                         is_admin = user_id in admin_ids
                         if is_admin:
                             logger.debug(f"User {user_id} is in admin list")
-                
+
                 # Check permissions using global variables
                 is_auth_user = False
                 if str(chat_id) in AUTH:
                     is_auth_user = user_id in AUTH[str(chat_id)]
                     if is_auth_user:
                         logger.debug(f"User {user_id} is authorized for chat {chat_id}")
-                    
+
                 if not isinstance(update, CallbackQuery):
                     if command and str(command).endswith('del'):
                         is_auth_user = False
                         logger.debug("Command ends with 'del', auth_user status reset")
-                
+
                 is_authorized = (
                     is_admin or str(OWNER_ID) == str(user_id) or user_id in SUDO or is_auth_user)
-                
+
                 # Get chat member status
                 chat_member = await client.get_chat_member(chat_id, user_id)
                 is_chat_admin = chat_member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
-                
+
                 # Check if user is trying to skip their own song (only for skip commands)
                 is_song_owner_skip = False
                 if command in ["skip", "cskip"]:
@@ -144,7 +144,7 @@ def admin_only():
                             if current_song["by"].id == user_id:
                                 is_song_owner_skip = True
                                 logger.debug(f"User {user_id} is song owner for skip command")
-                
+
                 # Allow access if user is admin OR (for skip commands only) if they own the song
                 if not (is_chat_admin or is_authorized or is_song_owner_skip):
                     logger.warning(f"User {user_id} not authorized for command {command}")
@@ -153,10 +153,10 @@ def admin_only():
                     else:
                         await update.reply("⚠️ This command is restricted to admins only.", reply_to_message_id=reply_id)
                     return
-                
+
                 logger.info(f"User {user_id} authorized for {func.__name__}")
                 return await func(client, update)
-                
+
             except Exception as e:
                 error_msg = f"Error checking admin status: {str(e)}"
                 logger.error(error_msg)
@@ -226,7 +226,7 @@ async def active_chats(client, message):
             except Exception as e:
                 title = f"• [ID: {chat_id}] (Failed to fetch title)"
             titles.append(title)
-        
+
         titles_str = '\n'.join(titles)
         reply_text = (
             f"<b>Active group calls:</b>\n"
@@ -255,7 +255,7 @@ async def mentionall(client, message):
     chat_id = message.chat.id
     direp = message.reply_to_message
     args = get_arg(message)
-    
+
     # If no message or reply provided, use random message from TAGALL
     if not direp and not args:
         import random
@@ -393,7 +393,7 @@ async def seek_handler_func(client, message):
 
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono(f'Seeked to {to_seek}!')}\n\nʙʏ: {message.from_user.mention()}"
+                f"{upper_mono('Seeked to {to_seek}!')}\n\nʙʏ: {message.from_user.mention()}"
             )
         else:
             await client.send_message(
@@ -442,30 +442,30 @@ async def delete_message_handler(client, message):
 async def auth_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    
+
     chat_id = message.chat.id
-    
+
     # Use global AUTH variable and ensure chat exists
     if str(chat_id) not in AUTH:
         AUTH[str(chat_id)] = []
-    
+
     if message.reply_to_message:
         replied_message = message.reply_to_message
         if replied_message.from_user:
             replied_user_id = replied_message.from_user.id
-            
+
             # Check if replied user is admin
             if os.path.exists(admin_file):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
                         return await message.reply(f"**Owner is already authorized everywhere.**")
-            
+
             # Check if user can be authorized
-            if (replied_user_id != message.chat.id and 
-                not replied_message.from_user.is_self and 
+            if (replied_user_id != message.chat.id and
+                not replied_message.from_user.is_self and
                 not OWNER_ID == replied_user_id):
-                
+
                 # Check if user is already authorized in this chat using global AUTH
                 if replied_user_id not in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].append(replied_user_id)
@@ -510,23 +510,23 @@ async def auth_user(client, message):
 async def unauth_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     chat_id = message.chat.id
-    
+
     # Ensure chat exists in global AUTH
     if str(chat_id) not in AUTH:
         AUTH[str(chat_id)] = []
-    
+
     if message.reply_to_message:
         replied_message = message.reply_to_message
         if replied_message.from_user:
             replied_user_id = replied_message.from_user.id
-            
+
             # Check if replied user is admin
             if os.path.exists(admin_file):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
                         return await message.reply(f"**You can't remove authorization from owner.**")
-            
+
             # Check if user can be unauthorized using global AUTH
             if replied_user_id in AUTH[str(chat_id)]:
                 AUTH[str(chat_id)].remove(replied_user_id)
@@ -608,7 +608,7 @@ async def block_user(client, message):
                     await message.reply(f"User {replied_user_id} has been added to blocklist.")
                 else:
                    return await message.reply(f"User {replied_user_id} already in the blocklist.")
-                
+
             else:
                 await message.reply("You cannot block yourself or a anonymous user")
         else:
@@ -685,7 +685,7 @@ async def unblock_user(client, message):
     if message.reply_to_message:
         replied_message = message.reply_to_message
         replied_user_id = replied_message.from_user.id
-        
+
         # Check if user is in blocklist using global BLOCK
         if replied_user_id in BLOCK:
             BLOCK.remove(replied_user_id)
@@ -703,7 +703,7 @@ async def unblock_user(client, message):
         if len(command_parts) > 1:
             try:
                 target_user_id = int(command_parts[1])
-                
+
                 # Check if user is in blocklist using global BLOCK
                 if target_user_id in BLOCK:
                     BLOCK.remove(target_user_id)
@@ -736,18 +736,18 @@ async def show_sudo_list(client, message):
 
     if not is_authorized:
         return await message.reply("**MF\n\nTHIS IS PAID OWNER'S COMMAND...**")
-    
+
     try:
         # Get all users who have SUDOERS field
         sudo_users = user_sessions.find_one({"bot_id": client.me.id}).get("SUDOERS", []) if user_sessions.find_one({"bot_id": client.me.id}) else []
-        
+
         if not sudo_users:
             return await message.reply("No sudo users found in the database.")
-        
+
         # Build the sudo list message
         sudo_list = ["**🔱 SUDO USERS LIST:**\n"]
         number = 1
-        
+
         for user_id in sudo_users:
                 try:
                     # Try to get user info from Telegram
@@ -758,13 +758,13 @@ async def show_sudo_list(client, message):
                     # If can't get user info, just show the ID
                     sudo_list.append(f"**{number}➤** Unknown User [`{user_id}`]")
                 number += 1
-        
+
         # Add count at the bottom
         sudo_list.append(f"\n**Total SUDO Users:** `{number-1}`")
-        
+
         # Send the message
         await message.reply("\n".join(sudo_list))
-        
+
     except Exception as e:
         await message.reply(f"An error occurred while fetching sudo list: {str(e)}")
 
@@ -780,7 +780,7 @@ async def add_to_sudo(client, message):
         with open(admin_file, "r") as file:
             admin_ids = [int(line.strip()) for line in file.readlines()]
             is_admin = user_id in admin_ids
-    
+
     is_authorized = is_admin or str(OWNER_ID) == str(user_id)
 
     if not is_authorized:
@@ -949,6 +949,7 @@ async def remove_from_sudo(client, message):
 
 
 
+
 from pyrogram.types import Chat
 from pyrogram.errors import ChatAdminRequired
 
@@ -1023,7 +1024,7 @@ async def user_client_start_handler(client, message):
         should_log = True
     if should_log:
         log_group = LOGGER_ID
-        
+
         if log_group:
           try:
             await send_log_message(
@@ -1042,14 +1043,14 @@ async def user_client_start_handler(client, message):
             loading = await message.reply("Getting stream info! Please wait...")
             # Split the argument using underscore and get the video ID
             _, video_id = command_args[1].split('_', 1)
-            
+
             # Get video details
             video_info = get_video_details(video_id)
-            
+
             if isinstance(video_info, dict):
                 # Format numbers
                 views = format_number(video_info['view_count'])
-                
+
                 # Create formatted message
                 logger.info(video_info['thumbnail'])
                 await loading.delete()
@@ -1059,7 +1060,7 @@ async def user_client_start_handler(client, message):
                     f"👁 **Views:** {views}\n"
                     f"📺 **Channel:** {video_info['channel_name']}\n"
                 )
-                
+
                 # Create inline keyboard with YouTube button
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton(
@@ -1067,7 +1068,7 @@ async def user_client_start_handler(client, message):
                         url=video_info['video_url']
                     )]
                 ])
-                
+
                 # Send thumbnail as photo with caption and keyboard
                 try:
                     return await message.reply_photo(
@@ -1087,7 +1088,7 @@ async def user_client_start_handler(client, message):
                     f"❌ Error: {video_info}",
                     reply_to_message_id=message.id
                 )
-                
+
         except Exception as e:
             return await message.reply_text(
                 f"❌ Error processing video ID: {str(e)}",
@@ -1122,8 +1123,8 @@ async def user_client_start_handler(client, message):
     uptime = await get_readable_time((time.time() - StartTime))
     start = datetime.datetime.now()
 
-    
-    
+
+
     # Get system resources
     try:
         cpu_cores = psutil.cpu_count() or "N/A"
@@ -1144,14 +1145,14 @@ async def user_client_start_handler(client, message):
        logo_path_jpg = f"{user_dir}/logo.jpg"
        logo_path_mp4 = f"{user_dir}/logo.mp4"
        logo = None
-       
+
        if os.path.exists(logo_path_mp4):
            logo = logo_path_mp4
        elif os.path.exists(logo_path_jpg):
            logo = logo_path_jpg
        else:
            logo = gvarstatus(client.me.id, "LOGO") or (await client.download_media(client.me.photo.big_file_id, logo_path_jpg) if client.me.photo else "music.jpg")
-       
+
        alive_logo = logo
        if type(logo) is bytes:
            alive_logo = logo_path_jpg
@@ -1447,13 +1448,13 @@ async def dend(client, update, channel_id= None):
             next_song = queues[chat_id].pop(0)
             playing[chat_id] = next_song
             await join_call(
-                next_song['message'], 
+                next_song['message'],
                 next_song['title'],
                 next_song['yt_link'],
-                next_song['chat'], 
-                next_song['by'], 
-                next_song['duration'], 
-                next_song['mode'], 
+                next_song['chat'],
+                next_song['by'],
+                next_song['duration'],
+                next_song['mode'],
                 next_song['thumb']
             )
         else:
@@ -1465,7 +1466,7 @@ async def dend(client, update, channel_id= None):
     except Exception as e:
         logger.error(f"Error in dend function: {e}")
 
-    
+
 from PIL import Image
 import imageio
 import cv2
@@ -1510,23 +1511,23 @@ async def download_media_with_progress(client, msg, media_msg, type_of):
 async def progress_bar(current, total, client, msg, type_of, filename, start_time):
     if total == 0:
         return
-    
+
     try:
             progress_percent = current * 100 / total
             progress_message = f"{type_of} {filename}: {progress_percent:.2f}%\n"
-            
+
             # Progress bar calculation
             progress_bar_length = 20
             num_ticks = int(progress_percent / (100 / progress_bar_length))
             progress_bar_text = '█' * num_ticks + '░' * (progress_bar_length - num_ticks)
-            
+
             # Speed calculation
             elapsed_time = time.time() - start_time
             speed = current / (elapsed_time * 1024 * 1024) if elapsed_time > 0 else 0
-            
+
             # Time remaining calculation
             time_left = (total - current) / (speed * 1024 * 1024) if speed > 0 else 0
-            
+
             # Format message
             progress_message += (
                 f"Speed: {speed:.2f} MB/s\n"
@@ -1534,7 +1535,7 @@ async def progress_bar(current, total, client, msg, type_of, filename, start_tim
                 f"Size: {current/1024/1024:.2f}MB / {total/1024/1024:.2f}MB\n"
                 f"[{progress_bar_text}]"
             )
-            
+
             # Edit message with exponential backoff
             try:
               if random.choices([True, False], weights=[1, 20])[0]:
@@ -1555,7 +1556,7 @@ def with_opencv(filename):
     # List of common audio file extensions
     audio_extensions = ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.mp4', '.wma']
     file_ext = os.path.splitext(filename)[1].lower()
-    
+
     # Handle audio files with mutagen
     if file_ext in audio_extensions:
         try:
@@ -1587,7 +1588,7 @@ async def play_handler_func(client, message):
         await message.delete()
     except:
         pass
-    
+
     # Check if user is banned using global BLOCK variable
     if message.from_user.id in BLOCK:
         return
@@ -1596,19 +1597,19 @@ async def play_handler_func(client, message):
     mode = "video" if command.startswith("v") or command.startswith("cv") else "audio"
     force_play = command.endswith("force")
     channel_mode = command.startswith("c")
-    
+
     # Check if the command is sent in a group
     if message.chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
         await message.reply("The play commands can only be used in group chats.")
         return
 
-    # Get the bot username and retrieve the session client ID from connector  
-    youtube_link = None  
-    input_text = message.text.split(" ", 1)  
-    d_ata = collection.find_one({"bot_id": client.me.id})  
-      
+    # Get the bot username and retrieve the session client ID from connector
+    youtube_link = None
+    input_text = message.text.split(" ", 1)
+    d_ata = collection.find_one({"bot_id": client.me.id})
+
     act_calls = len(active)
-    
+
     # Determine if we need channel mode
     chat = message.chat
     target_chat_id = message.chat.id
@@ -1619,61 +1620,61 @@ async def play_handler_func(client, message):
             await message.reply("This group doesn't have a linked channel.")
             return
         target_chat_id = linked_chat.id
-    
+
     # Check queue for the target chat
-    current_queue = len(queues.get(target_chat_id, [])) if queues else 0  
+    current_queue = len(queues.get(target_chat_id, [])) if queues else 0
 
     massage = await message.reply("⚡")
-    
+
     # Set target chat as active based on channel mode or not
     is_active = await is_active_chat(client, target_chat_id)
-    await add_active_chat(client, target_chat_id)  
+    await add_active_chat(client, target_chat_id)
 
-    youtube_link = None  
-    media_info = {}  
+    youtube_link = None
+    media_info = {}
 
-    # Check if replied to media message  
-    if message.reply_to_message and message.reply_to_message.media:  
-        media_msg = message.reply_to_message  
-        media_type = None  
-        duration = 0  
-        thumbnail = None  
+    # Check if replied to media message
+    if message.reply_to_message and message.reply_to_message.media:
+        media_msg = message.reply_to_message
+        media_type = None
+        duration = 0
+        thumbnail = None
 
-        # Video handling  
-        if media_msg.video:  
-            media = media_msg.video  
-            media_type = "video"  
-            title = media.file_name or "Telegram Video"  
-            duration = media.duration  
-            if media.thumbs:  
-                thumbnail = await client.download_media(media.thumbs[0].file_id)  
+        # Video handling
+        if media_msg.video:
+            media = media_msg.video
+            media_type = "video"
+            title = media.file_name or "Telegram Video"
+            duration = media.duration
+            if media.thumbs:
+                thumbnail = await client.download_media(media.thumbs[0].file_id)
 
-        # Audio handling  
-        elif media_msg.audio:  
-            media = media_msg.audio  
-            media_type = "audio"  
-            title = media.title or "Telegram Audio"  
-            duration = media.duration  
-            if media.thumbs:  
-                thumbnail = await client.download_media(media.thumbs[0].file_id)  
+        # Audio handling
+        elif media_msg.audio:
+            media = media_msg.audio
+            media_type = "audio"
+            title = media.title or "Telegram Audio"
+            duration = media.duration
+            if media.thumbs:
+                thumbnail = await client.download_media(media.thumbs[0].file_id)
 
-        # Voice message handling  
-        elif media_msg.voice:  
-            media = media_msg.voice  
-            media_type = "voice"  
-            title = "Voice Message"  
-            duration = media.duration  
+        # Voice message handling
+        elif media_msg.voice:
+            media = media_msg.voice
+            media_type = "voice"
+            title = "Voice Message"
+            duration = media.duration
 
-        # Video note handling  
-        elif media_msg.video_note:  
-            media = media_msg.video_note  
-            media_type = "video_note"  
-            title = "Video Note"  
-            duration = media.duration  
-            if media.thumbs:  
-                thumbnail = await client.download_media(media.thumbs[0].file_id)  
-        elif media_msg.document:  
-            doc = media_msg.document  
+        # Video note handling
+        elif media_msg.video_note:
+            media = media_msg.video_note
+            media_type = "video_note"
+            title = "Video Note"
+            duration = media.duration
+            if media.thumbs:
+                thumbnail = await client.download_media(media.thumbs[0].file_id)
+        elif media_msg.document:
+            doc = media_msg.document
             media = media_msg.document
     # In Pyrogram, check the mime_type directly
             if doc.mime_type:
@@ -1687,112 +1688,113 @@ async def play_handler_func(client, message):
                      duration = getattr(doc, 'duration', 0)
 
 
-            if media_type and doc.thumbs:  
+            if media_type and doc.thumbs:
                 thumbnail = await client.download_media(doc.thumbs[0].file_id,f"{user_dir}/")
-        else:  
-            await massage.edit(f"{upper_mono('❌ Unsupported media type')}")  
-            return await remove_active_chat(client, target_chat_id)  
-        if not media_type:  
-            await massage.edit(f"{upper_mono('❌ Unsupported media type')}")  
-            return await remove_active_chat(client, target_chat_id)  
-        # For media messages  
-        youtube_link = await download_media_with_progress(  
-            client,  
-            massage,  
-            message.reply_to_message,  
+        else:
+            await massage.edit(f"{upper_mono('❌ Unsupported media type')}")
+            return await remove_active_chat(client, target_chat_id)
+        if not media_type:
+            await massage.edit(f"{upper_mono('❌ Unsupported media type')}")
+            return await remove_active_chat(client, target_chat_id)
+        # For media messages
+        youtube_link = await download_media_with_progress(
+            client,
+            massage,
+            message.reply_to_message,
             "Media"
         )
 
-        # Generate thumbnail if missing  
-        if not thumbnail and media_type in ["video", "video_note"]:  
-            try:  
-                thumbnail = generate_thumbnail(youtube_link, f'{user_dir}/thumb.png')  
-            except Exception as e:  
-                print(e)  
-                thumbnail = None  
-        # Format duration  
-        if not duration or duration <=0:  
-            duration = with_opencv(youtube_link)  
-        duration = format_duration(int(duration))  
-        media_info = {  
-            'title': title,  
-            'duration': duration,  
-            'thumbnail': thumbnail,  
-            'file_id': media.file_id,  
-            'media_type': media_type,  
-            'url': youtube_link  
-        }  
-    elif len(input_text) == 2:  
-        search_query = input_text[1]  
+        # Generate thumbnail if missing
+        if not thumbnail and media_type in ["video", "video_note"]:
+            try:
+                thumbnail = generate_thumbnail(youtube_link, f'{user_dir}/thumb.png')
+            except Exception as e:
+                print(e)
+                thumbnail = None
+        # Format duration
+        if not duration or duration <=0:
+            duration = with_opencv(youtube_link)
+        duration = format_duration(int(duration))
+        media_info = {
+            'title': title,
+            'duration': duration,
+            'thumbnail': thumbnail,
+            'file_id': media.file_id,
+            'media_type': media_type,
+            'url': youtube_link
+        }
+    elif len(input_text) == 2:
+        search_query = input_text[1]
 
         title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query)
-        if not youtube_link:  
-            try:  
-                await massage.edit(f"{upper_mono('No matching query found, please retry!')}")  
-                return await remove_active_chat(client, target_chat_id)  
-            except:  
-                return await remove_active_chat(client, target_chat_id)  
-    else:  
-        try:  
-            await massage.edit(f"{upper_mono('No query provided, please provide one')}\n`/play query`")  
-            return await remove_active_chat(client, target_chat_id)  
-        except:  
-            return  
-    # Get thumb based on media type  
-    if media_info:  
-        thumb = await get_thumb(  
-            media_info['title'],  
-            media_info['duration'],  
-            media_info['thumbnail'],  
-            None,  # channel_name  
-            None,  # views  
-            None   # video_id  
-        )  
-        # Add your media playback logic here using media_info  
-    else:  
-        # Existing YouTube handling  
-        thumb = await get_thumb(title, str(duration), thumbnail, channel_name, str(views), video_id)  
+        if not youtube_link:
+            try:
+                await massage.edit(f"{upper_mono('No matching query found, please retry!')}")
+                return await remove_active_chat(client, target_chat_id)
+            except:
+                return await remove_active_chat(client, target_chat_id)
+    else:
+        try:
+            await massage.edit(f"{upper_mono('No query provided, please provide one')}\n`/play query`")
+            return await remove_active_chat(client, target_chat_id)
+        except:
+            return
 
-    bot_username = client.me.username  
-    
-    # Retrieve the session client from the clients dictionary  
-    
+    # Get thumb based on media type
+    if media_info:
+        thumb = await get_thumb(
+            media_info['title'],
+            media_info['duration'],
+            media_info['thumbnail'],
+            None,  # channel_name
+            None,  # views
+            None   # video_id
+        )
+        # Add your media playback logic here using media_info
+    else:
+        # Existing YouTube handling
+        thumb = await get_thumb(title, str(duration), thumbnail, channel_name, str(views), video_id)
+
+    bot_username = client.me.username
+
+    # Retrieve the session client from the clients dictionary
+
     # Join the group (same for both regular and channel mode)
     if message.chat.username:
         # Public group
-        try:  
-            try:  
-                joined_chat = await session.get_chat(message.chat.username)  
-            except:  
-                joined_chat = await session.join_chat(message.chat.username)  
-        except (InviteHashExpired, ChannelPrivate):  
-            await massage.edit(f"Assistant is banned in this chat.\n\nPlease unban {session.me.username or session.me.id}")  
-            return await remove_active_chat(client, target_chat_id)  
-        except Exception as e:  
-            await massage.edit(f"Failed to join the group. Error: {e}")  
-            return await remove_active_chat(client, target_chat_id)  
-    else:  
-        # Private group
-        bot_member = await client.get_chat_member(message.chat.id, client.me.id)  
-
-        if bot_member.status == ChatMemberStatus.ADMINISTRATOR and bot_member.privileges.can_invite_users:  
-            try:  
-                invite_link = await client.export_chat_invite_link(message.chat.id)  
-                try:  
-                    joined_chat = await session.get_chat(message.chat.id)  
-                except:  
-                    joined_chat = await session.join_chat(invite_link)  
-            except (InviteHashExpired, ChannelPrivate):  
-                await massage.edit(f"Assistant is banned in this chat.\n\nPlease unban {session.me.mention()}\nuser id: {session.me.id}")  
-                return await remove_active_chat(client, target_chat_id)  
-            except Exception as e:  
-                await massage.edit(f"Failed to join the group. Error: {e}")  
-                return await remove_active_chat(client, target_chat_id)  
-        else:  
-            await massage.edit("I need 'Invite Users via Link' permission to join this private group. Please grant me this permission.")  
+        try:
+            try:
+                joined_chat = await session.get_chat(message.chat.username)
+            except:
+                joined_chat = await session.join_chat(message.chat.username)
+        except (InviteHashExpired, ChannelPrivate):
+            await massage.edit(f"Assistant is banned in this chat.\n\nPlease unban {session.me.username or session.me.id}")
             return await remove_active_chat(client, target_chat_id)
-    
-    
+        except Exception as e:
+            await massage.edit(f"Failed to join the group. Error: {e}")
+            return await remove_active_chat(client, target_chat_id)
+    else:
+        # Private group
+        bot_member = await client.get_chat_member(message.chat.id, client.me.id)
+
+        if bot_member.status == ChatMemberStatus.ADMINISTRATOR and bot_member.privileges.can_invite_users:
+            try:
+                invite_link = await client.export_chat_invite_link(message.chat.id)
+                try:
+                    joined_chat = await session.get_chat(message.chat.id)
+                except:
+                    joined_chat = await session.join_chat(invite_link)
+            except (InviteHashExpired, ChannelPrivate):
+                await massage.edit(f"Assistant is banned in this chat.\n\nPlease unban {session.me.mention()}\nuser id: {session.me.id}")
+                return await remove_active_chat(client, target_chat_id)
+            except Exception as e:
+                await massage.edit(f"Failed to join the group. Error: {e}")
+                return await remove_active_chat(client, target_chat_id)
+        else:
+            await massage.edit("I need 'Invite Users via Link' permission to join this private group. Please grant me this permission.")
+            return await remove_active_chat(client, target_chat_id)
+
+
     # Set the target chat based on whether it's channel mode or not
     target_chat = None
     if channel_mode:
@@ -1814,21 +1816,21 @@ async def play_handler_func(client, message):
         by,
         duration,
         mode,
-        thumb, 
+        thumb,
         force_play
     )
     if is_active and not force_play:
                 position = len(queues.get(message.chat.id)) if queues.get(target_chat.id) else 1
                 keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton(text="▷", callback_data=f"{'c' if channel_mode else ''}resume"),
-                InlineKeyboardButton(text="II", callback_data=f"{'c' if channel_mode else ''}pause"),
-                InlineKeyboardButton(text="‣‣I" if position <1 else f"‣‣I({position})", callback_data=f"{'c' if channel_mode else ''}skip"),
-                InlineKeyboardButton(text="▢", callback_data=f"{'c' if channel_mode else ''}end"),
+                InlineKeyboardButton("▷", callback_data=f"{'c' if channel_mode else ''}resume"),
+                InlineKeyboardButton("II", callback_data=f"{'c' if channel_mode else ''}pause"),
+                InlineKeyboardButton("‣‣I({position})" if position <1 else f"‣‣I({position})", callback_data=f"{'c' if channel_mode else ''}skip"),
+                InlineKeyboardButton("▢", callback_data=f"{'c' if channel_mode else ''}end"),
             ],
         [
             InlineKeyboardButton(
-                text="✖ Close", 
+                text="✖ Close",
                 callback_data="close"
             )
         ],
@@ -1862,7 +1864,7 @@ logger = logging.getLogger(__name__)
 
 def format_duration(duration):
     """Format duration to HH:MM:SS, MM:SS, or SS format.
-    
+
     Handles both integer seconds and ISO 8601 duration format.
     """
     # Check if duration is ISO 8601 format (from YouTube API)
@@ -1909,26 +1911,26 @@ def truncate_description(description, max_length=50):
     Process description by:
     1. Extracting first two lines
     2. Truncating to max_length characters
-    
+
     Args:
         description (str): Original description
         max_length (int): Maximum length of description
-    
+
     Returns:
         str: Processed description
     """
     if not description or description == 'N/A':
         return ''
-    
+
     # Split description into lines
     lines = description.split('\n')
-    
+
     # Take first two lines
     selected_lines = lines[:2]
-    
+
     # Join the selected lines
     processed_description = ' '.join(selected_lines)
-    
+
     # Truncate and add ellipsis if longer than max_length
     return (processed_description[:max_length] + '...') if len(processed_description) > max_length else processed_description
 
@@ -1960,7 +1962,7 @@ def handle_youtube_ytdlp(argument):
 
             # Get highest resolution thumbnail
             thumbnail = info.get('thumbnails', [{}])[-1].get('url', 'Thumbnail not found') if info.get('thumbnails') else 'Thumbnail not found'
-            
+
             video_id = info.get('id', 'ID not found')
             youtube_link = f'https://youtu.be/{video_id}'
 
@@ -1990,19 +1992,19 @@ def handle_youtube(argument):
     """
     Main function to get YouTube video information.
     Falls back to yt-dlp if the YouTube API fails.
-    
+
     Returns:
         tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
     """
     # First try using the YouTube Data API
-    
+
     result = handle_youtube_ytdlp(argument)
-    
+
     # If both methods fail, return error values
     if not result:
         logger.error("Both YouTube API and yt-dlp failed")
         return ("Error", "00:00", None, None, None, None, None)
-    
+
     return result
 
 
@@ -2042,7 +2044,7 @@ forceplay = False):
             queues[chat.id].append(put)
     else:
         check = queues.get(chat.id)
-        
+
         if not check:
            queues[chat.id] = []
         queues[chat.id].append(put)
@@ -2151,12 +2153,12 @@ async def status(client, message):
 
         users = user_data.get('users', [])
         total_users = len(users)
-        
+
         # Process chats in batches for better performance
         for i, chat_id in enumerate(users):
             try:
                 chat_type = await get_chat_type(client, chat_id)
-                
+
                 if chat_type == enums.ChatType.PRIVATE:
                     u += 1
                 elif chat_type == enums.ChatType.GROUP:
@@ -2208,7 +2210,7 @@ async def status(client, message):
 <b>🎶 @{client.me.username} Performance Summary</b>
 """
         await Man.edit_text(final_stats)
-        
+
     else:
         await Man.edit_text("❌ No operational data found for this bot")
 
@@ -2257,13 +2259,6 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
         playing[chat_id].clear()
 
 
-from pyrogram import Client, filters
-from pyrogram.enums import ChatMemberStatus
-from pyrogram.types import Message, ChatMemberUpdated
-
-
-
-
 @Client.on_message(filters.command("end"))
 @admin_only()
 async def end_handler_func(client, message):
@@ -2281,8 +2276,9 @@ async def end_handler_func(client, message):
    if is_active:
        await remove_active_chat(client, message.chat.id)
        queues[message.chat.id].clear()
-       await client.send_message(message.chat.id, 
-f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}"            )
+       await client.send_message(message.chat.id,
+f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}"
+            )
        await call_py.leave_call(message.chat.id)
        playing[message.chat.id].clear()
    else:
@@ -2299,9 +2295,12 @@ f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━�
 
 
 from pyrogram import Client, filters
-from pyrogram.types import CallbackQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
-@Client.on_callback_query(filters.regex("^(skip|cskip)$"))
+
+
+
+@Client.on_callback_query(filters.regex(r"^(skip|cskip)$"))
 @admin_only()
 async def button_end_handler(client: Client, callback_query: CallbackQuery):
     user_data = collection.find_one({"bot_id": client.me.id})
@@ -2329,7 +2328,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             except:
                 pass
             await join_call(next['message'],
- next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
+ next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('stream_url')
 )
          else:
             await clients['call_py'].leave_call(chat_id)
@@ -2341,7 +2340,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             await remove_active_chat(client, chat_id)
             await call_py.leave_call(chat_id)
             await callback_query.message.reply(
-                f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
+                f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}"
             )
             playing[chat_id].clear()
     except NotInCallError:
@@ -2358,7 +2357,7 @@ async def loop_handler_func(client, message):
         await message.delete()
     except:
         pass
-    
+
     # Check if user is banned
     user_data = collection.find_one({"bot_id": client.me.id})
     busers = user_data.get('busers', [])
@@ -2374,7 +2373,7 @@ async def loop_handler_func(client, message):
                 "❌ Please specify the number of loops.\nUsage: /loop <number>"
             )
             return
-        
+
         try:
             loop_count = int(command_parts[1])
             if loop_count <= 0 or loop_count > 20:
@@ -2393,25 +2392,25 @@ async def loop_handler_func(client, message):
         # Check if there's a song playing
         if message.chat.id in playing and playing[message.chat.id]:
             current_song = playing[message.chat.id]
-            
+
             # Initialize queue for this chat if it doesn't exist
             if message.chat.id not in queues:
                 queues[message.chat.id] = []
-            
+
             # Add the current song to queue multiple times
             for _ in range(loop_count):
                 queues[message.chat.id].insert(0, current_song)
-            
+
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono(f'Current song will be repeated {loop_count} times!')}\n\nʙʏ: {message.from_user.mention()}"
+                f"{upper_mono('Current song will be repeated {loop_count} times!')}\n\nʙʏ: {message.from_user.mention()}"
             )
         else:
             await client.send_message(
                 message.chat.id,
                 f"{upper_mono('Assistant is not streaming anything!')}"
             )
-            
+
     except Exception as e:
         await client.send_message(
             message.chat.id,
@@ -2440,8 +2439,7 @@ async def skip_handler_func(client, message):
           await call_py.pause(message.chat.id)
        except:
           pass
-       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb']
-)
+       await join_call(next['message'], next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('stream_url'))
     else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
@@ -2450,7 +2448,7 @@ async def skip_handler_func(client, message):
    else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
-       await client.send_message(message.chat.id, 
+       await client.send_message(message.chat.id,
               f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}")
        playing[message.chat.id].clear()
   except NotInCallError:
@@ -2558,12 +2556,11 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 @Client.on_callback_query(filters.regex("broadcast"))
-async def broadcast_callback_handler(client, callback_query: CallbackQuery):
+async def broadcast_callback_handler(client, callback_query):
     # Fetch user data for the callback query
     user_data = user_sessions.find_one({"bot_id": client.me.id})
     if not user_data:
-        return await callback_query.answer("User data not found.", show_alert=True)
-
+        return await callback_query.answer("User data not found. Please log in first.", show_alert=True)
     group = user_data.get('group')
     private = user_data.get('private')
     ugroup = user_data.get('ugroup')
@@ -2585,7 +2582,7 @@ async def broadcast_callback_handler(client, callback_query: CallbackQuery):
         chat_types = await asyncio.gather(
             *[get_chat_type(client, chat_id) for chat_id in users]
         )
-        
+
         # Prepare message for broadcast
         if not message_to_broadcast:
             return await callback_query.answer("No message ready for broadcast.", show_alert=True)
@@ -2778,27 +2775,27 @@ async def compare_message(mess, client, session):
         # Compare text messages
         if mess.text and msg.text == mess.text:
             return msg
-        
+
         # Compare media messages
         elif mess.media and msg.media:
             try:
                 # Get the media type (photo, video, etc.)
                 mess_media_type = mess.media.value
                 msg_media_type = msg.media.value
-                
+
                 # Check if both messages have the same media type
                 if mess_media_type == msg_media_type:
                     # Get file unique IDs for comparison
                     mess_file_id = getattr(mess, mess_media_type).file_unique_id
                     msg_file_id = getattr(msg, msg_media_type).file_unique_id
-                    
+
                     # Compare file IDs
                     if mess_file_id and msg_file_id and mess_file_id == msg_file_id:
                         return msg
             except AttributeError:
                 # Skip if media attributes are not accessible
                 continue
-    
+
     # Return None if no matching message is found
     return None
 
@@ -2932,16 +2929,16 @@ async def handle_power_command(client, message):
             chat_id=message.chat.id,
             user_id=client.me.id if not message.reply_to_message else message.reply_to_message.from_user.id
         )
-        
+
         # Get chat info
         chat = await client.get_chat(message.chat.id)
-        
+
         # Create permission status message
         power_message = (
             f"🤖 **{'Bot' if not message.reply_to_message else message.reply_to_message.from_user.mention()} Permissions in {chat.title}**\n\n"
             "📋 **Basic Powers:**\n"
         )
-        
+
         # Basic permissions
         permissions = {
             "can_delete_messages": "Delete Messages",
@@ -2954,13 +2951,13 @@ async def handle_power_command(client, message):
             "can_manage_chat": "Manage Chat",
             "can_manage_topics": "Manage Topics"
         }
-        
+
         # Add permission statuses
         for perm, display_name in permissions.items():
             status = getattr(bot_member.privileges, perm, False)
             emoji = "✅" if status else "❌"
             power_message += f"{emoji} {display_name}\n"
-            
+
         # Add administrative status
         power_message += "\n📊 **Status:**\n"
         if bot_member.status == enums.ChatMemberStatus.ADMINISTRATOR:
@@ -2969,28 +2966,28 @@ async def handle_power_command(client, message):
             power_message += "👤 Bot is a **Regular Member**"
         else:
             power_message += "❓ Bot Status: " + str(bot_member.status).title()
-            
+
         # Add anonymous admin status if applicable
         if hasattr(bot_member.privileges, "is_anonymous"):
             anon_status = "✅" if bot_member.privileges.is_anonymous else "❌"
             power_message += f"\n{anon_status} Anonymous Admin"
-            
+
         # Add custom title if exists
         if hasattr(bot_member, "custom_title") and bot_member.custom_title:
             power_message += f"\n👑 Custom Title: **{bot_member.custom_title}**"
-            
+
         # Create inline buttons for refresh and support
         buttons = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_power_{message.chat.id}"),
             ]
         ])
-        
+
         await message.reply(
             power_message,
             #reply_markup=buttons
         )
-        
+
     except Exception as e:
         logger.error(f"Power check error: {e}")
         await message.reply("❌ Failed to check bot permissions!")
@@ -3061,19 +3058,18 @@ async def pingme(client, message):
 
 from pyrogram import Client, enums, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-import os
 
 @Client.on_message(filters.command("about"))
 async def info_command(client: Client, message: Message):
     chat = message.chat
     replied = message.reply_to_message
-    
+
     # Setup user directory
     session_name = f'user_{client.me.id}'
     user_dir = f"{ggg}/{session_name}"
     os.makedirs(user_dir, exist_ok=True)
     photo_path = f"{user_dir}/logo.jpg"
-    
+
     def create_copy_markup(text: str) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([[
             InlineKeyboardButton("Copy Info", copy_text=text)
@@ -3111,10 +3107,10 @@ async def info_command(client: Client, message: Message):
             response += f" {user.last_name}\n"
         else:
             response += "\n"
-        
+
         if user.username:
             response += f"🌐 **Username**: @{user.username}\n"
-        
+
         # Add restriction, scam, and fake flags
         if user.is_restricted:
             response += "⚠️ **Account Restricted**: Yes\n"
@@ -3124,7 +3120,7 @@ async def info_command(client: Client, message: Message):
             response += "🚫 **Scam Account**: Yes\n"
         if user.is_fake:
             response += "🎭 **Impersonator**: Yes\n"
-        
+
         # Add status and join date for group queries
         if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP):
             try:
@@ -3135,7 +3131,7 @@ async def info_command(client: Client, message: Message):
                     enums.ChatMemberStatus.MEMBER: "👤 Member"
                 }
                 response += f"🎚 **Status**: {status_map.get(member.status, 'Unknown')}\n"
-                
+
                 if member.joined_date:
                     join_date = member.joined_date.strftime("%Y-%m-%d %H:%M:%S UTC")
                     response += f"📅 **Joined**: {join_date}\n"
@@ -3143,7 +3139,7 @@ async def info_command(client: Client, message: Message):
                     response += "📅 **Joined**: Unknown\n"
             except Exception:
                 response += "🎚 **Status**: ❌ Not in group\n"
-        
+
         # Handle profile photo
         if user.photo:
             try:
@@ -3185,15 +3181,15 @@ async def info_command(client: Client, message: Message):
                     response += f"🌐 **Username**: @{sender_chat.username}\n"
                 if sender_chat.description:
                     response += f"📄 **Description**: {sender_chat.description[:300]}..."
-                
+
             await message.reply(
                 response,
                 reply_markup=create_copy_markup(response)
             )
-            
+
         else:
             user = await client.get_users(replied.from_user.id)
-            
+
             response = (
                 "👤 **User Info**\n"
                 f"🆔 **ID**: `{user.id}`\n"
@@ -3203,10 +3199,10 @@ async def info_command(client: Client, message: Message):
                 response += f" {user.last_name}\n"
             else:
                 response += "\n"
-            
+
             if user.username:
                 response += f"🌐 **Username**: @{user.username}\n"
-            
+
             if user.is_restricted:
                 response += "⚠️ **Account Restricted**: Yes\n"
                 if user.restriction_reason:
@@ -3215,7 +3211,7 @@ async def info_command(client: Client, message: Message):
                 response += "🚫 **Scam Account**: Yes\n"
             if user.is_fake:
                 response += "🎭 **Impersonator**: Yes\n"
-            
+
             if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP):
                 try:
                     member = await client.get_chat_member(chat.id, user.id)
@@ -3225,7 +3221,7 @@ async def info_command(client: Client, message: Message):
                         enums.ChatMemberStatus.MEMBER: "👤 Member"
                     }
                     response += f"🎚 **Status**: {status_map.get(member.status, 'Unknown')}\n"
-                    
+
                     if member.joined_date:
                         join_date = member.joined_date.strftime("%Y-%m-%d %H:%M:%S UTC")
                         response += f"📅 **Joined**: {join_date}\n"
@@ -3233,7 +3229,7 @@ async def info_command(client: Client, message: Message):
                         response += "📅 **Joined**: Unknown\n"
                 except Exception:
                     response += "🎚 **Status**: ❌ Not in group\n"
-            
+
             if user.photo:
                 try:
                     await client.download_media(user.photo.big_file_id, photo_path)
@@ -3252,39 +3248,39 @@ async def info_command(client: Client, message: Message):
                     response,
                     reply_markup=create_copy_markup(response)
                 )
-    
+
     else:
         if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP):
             full_chat = await client.get_chat(chat.id)
-            
+
             admin_count = 0
             async for member in client.get_chat_members(
                 chat.id,
                 filter=enums.ChatMembersFilter.ADMINISTRATORS
             ):
                 admin_count += 1
-            
+
             response = (
                 "👥 **Group Info**\n"
                 f"🏷 **Title**: {full_chat.title}\n"
                 f"🆔 **ID**: `{full_chat.id}`\n"
             )
-            
+
             if full_chat.username:
                 response += f"🌐 **Username**: @{full_chat.username}\n"
             response += (
                 f"👥 **Members**: {full_chat.members_count}\n"
                 f"🔧 **Admins**: {admin_count}\n"
             )
-            
+
             await message.reply(
                 response,
                 reply_markup=create_copy_markup(response)
             )
-            
+
         else:
             user = await client.get_users(chat.id)
-            
+
             response = (
                 "👤 **User Info**\n"
                 f"🆔 **ID**: `{user.id}`\n"
@@ -3294,21 +3290,21 @@ async def info_command(client: Client, message: Message):
                 response += f" {user.last_name}\n"
             else:
                 response += "\n"
-            
+
             if user.username:
                 response += f"🌐 **Username**: @{user.username}\n"
-            
+
             if user.is_restricted:
                 response += "⚠️ **Account Restricted**: Yes\n"
                 if user.restriction_reason:
                     response += f"📝 **Restriction Reason**: {user.restriction_reason}\n"
-            
+
             if user.is_scam:
                 response += "🚫 **Scam Account**: Yes\n"
-            
+
             if user.is_fake:
                 response += "🎭 **Impersonator**: Yes\n"
-            
+
             if user.photo:
                 try:
                     await client.download_media(user.photo.big_file_id, photo_path)
@@ -3479,15 +3475,13 @@ async def kang(client, message):
                 packname = f"a{user.id}_by_{user.username}_{pack}"
                 packnick = f"{custom_packnick} vol.{pack}"
                 if is_anim:
-                    packname += "_anim"
+                    packname += f"_anim"
                     packnick += " (Animated)"
                 if is_video:
                     packname += "_video"
                     packnick += " (Video)"
                     await Man.edit(
-                    "`Creating a New Sticker Pack"
-                    + str(pack)
-                    + "Because the Sticker Pack is Full"
+                    f"`Creating a New Sticker Pack {pack} Because the Sticker Pack is Full`"
                 )
                 await client.send_message("stickers", packname)
                 await asyncio.sleep(2)
@@ -3635,7 +3629,7 @@ async def set_welcome_handler(client, message):
             return await message.reply_text(usage_text)
 
         updates = []
-        
+
         # Handle text if present
         if replied_msg.text or replied_msg.caption:
             welcome_text = (replied_msg.text or replied_msg.caption).strip()
@@ -3660,32 +3654,32 @@ async def set_welcome_handler(client, message):
 
             def convert_to_html(text, msg_entities):
                 tag_positions = []
-                
+
                 for entity in msg_entities:
                     if entity.type in ENTITY_TO_HTML:
                         start_tag, end_tag = ENTITY_TO_HTML[entity.type]
-                        
+
                         if entity.type == MessageEntityType.PRE and getattr(entity, 'language', None):
                             tag_positions.append((entity.offset, f'<pre language="{entity.language}">', True))
                         else:
                             tag_positions.append((entity.offset, f'<{start_tag}>', True))
-                        
+
                         tag_positions.append((entity.offset + entity.length, f'</{end_tag}>', False))
 
                 tag_positions.sort(key=lambda x: (x[0], x[2]))
-                
+
                 result = []
                 current_pos = 0
-                
+
                 for pos, tag, _ in tag_positions:
                     if pos > current_pos:
                         result.append(text[current_pos:pos])
                     result.append(tag)
                     current_pos = pos
-                
+
                 if current_pos < len(text):
                     result.append(text[current_pos:])
-                    
+
                 return ''.join(result)
 
             processed_text = convert_to_html(welcome_text, entities)
@@ -3694,10 +3688,10 @@ async def set_welcome_handler(client, message):
             ALLOWED_PLACEHOLDERS = {"{name}", "{id}", "{botname}"}
             placeholder_regex = r'\{([^{}]+)\}'
             found_placeholders = set(re.findall(placeholder_regex, processed_text))
-            
-            invalid_placeholders = [f"{{{p}}}" for p in found_placeholders 
+
+            invalid_placeholders = [f"{{{p}}}" for p in found_placeholders
                                   if f"{{{p}}}" not in ALLOWED_PLACEHOLDERS]
-            
+
             if invalid_placeholders:
                 error_msg = "❌ Invalid placeholders found:\n"
                 error_msg += "\n".join(f"• {p}" for p in invalid_placeholders)
@@ -3717,7 +3711,7 @@ async def set_welcome_handler(client, message):
             m_d = None
             try:
                 # Check if media type is allowed
-                if not (replied_msg.photo or replied_msg.video or 
+                if not (replied_msg.photo or replied_msg.video or
                        replied_msg.sticker or replied_msg.animation):
                     return await message.reply_text("Only photos, videos, GIFs, and stickers are allowed.")
 
@@ -3729,7 +3723,7 @@ async def set_welcome_handler(client, message):
                 # First try to save to user_dir
                 logo_path_jpg = f"{user_dir}/logo.jpg"
                 logo_path_mp4 = f"{user_dir}/logo.mp4"
-                
+
                 # Process media based on type
                 if replied_msg.sticker:
                     m_d = await convert_to_image(replied_msg)
@@ -3742,7 +3736,7 @@ async def set_welcome_handler(client, message):
                         target_path = logo_path_mp4
                     else:
                         target_path = logo_path_jpg
-                    
+
                     os.rename(m_d, target_path)
                     updates.append(f"logo (saved to {target_path})")
 
@@ -3764,7 +3758,7 @@ async def set_welcome_handler(client, message):
             logo_path_jpg = f"{user_dir}/logo.jpg"
             logo_path_mp4 = f"{user_dir}/logo.mp4"
             logo = None
-            
+
             if os.path.exists(logo_path_mp4):
                 logo = logo_path_mp4
             elif os.path.exists(logo_path_jpg):
@@ -3831,5 +3825,3 @@ async def resetwelcome(client: Client, message: Message):
     set_gvar(client.me.id, "WELCOME", None)
     set_gvar(client.me.id, "LOGO", None)
     await message.reply_text("Welcome message and logo have been reset.")
-
-
