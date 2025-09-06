@@ -1059,10 +1059,7 @@ async def user_client_start_handler(client, message):
                     f"📝 **Title:** {video_info['title']}\n\n"
                     f"⏱ **Duration:** {video_info['duration']}\n"
                     f"👁 **Views:** {views}\n"
-                    f"👍 **Likes:** {likes}\n"
                     f"📺 **Channel:** {video_info['channel_name']}\n"
-                    f"👥 **Subscribers:** {subs}\n"
-                    f"📅 **Upload Date:** {video_info['upload_date']}"
                 )
                 
                 # Create inline keyboard with YouTube button
