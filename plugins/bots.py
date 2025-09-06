@@ -1986,44 +1986,17 @@ from urllib.parse import urlparse
 
 def handle_youtube(argument):
     """
-    Main function to get YouTube video information.
-    Prioritizes API calls, falls back to yt-dlp.
+    Main function to get YouTube video information using yt-dlp.
 
     Returns:
         tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
     """
-    import api_client
-    import os
-    
-    # First try API if token is available
-    API_TOKEN = os.getenv('NUB_YTDLP_API')
-    if API_TOKEN:
-        try:
-            logger.info("Attempting API request for video info...")
-            api_result = api_client.get_video_info(argument)
-            
-            if api_result and api_result[0] and api_result[0] != "N/A":
-                title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
-                
-                # Format duration if it's in seconds
-                if isinstance(duration, int):
-                    duration = format_duration(duration)
-                
-                logger.info(f"API request successful, took {time_taken}")
-                return (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
-            else:
-                logger.warning("API returned invalid data, falling back to yt-dlp")
-        except Exception as e:
-            logger.error(f"API request failed: {e}, falling back to yt-dlp")
-    else:
-        logger.info("No API token found, using yt-dlp")
-
-    # Fallback to yt-dlp
+    # Use yt-dlp directly
     result = handle_youtube_ytdlp(argument)
 
     # If yt-dlp fails, return error values
     if not result:
-        logger.error("Both API and yt-dlp failed")
+        logger.error("yt-dlp failed")
         return ("Error", "00:00", None, None, None, None, None, None)
 
     # Add None for stream_url since yt-dlp doesn't provide it
