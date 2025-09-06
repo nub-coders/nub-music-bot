@@ -217,7 +217,7 @@ async def active_chats(client, message):
         return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
     # Use PyTgCalls.calls to get active calls directly
-    active_calls = call_py.calls
+    active_calls = await call_py.calls
     
     if active_calls:
         titles = []
