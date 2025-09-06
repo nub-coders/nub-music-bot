@@ -52,6 +52,90 @@ from pyrogram.errors import (
 import logging
 logger = logging.getLogger(__name__)
 
+async def join_call(message, title, yt_link, chat, by, duration, mode, thumb, stream_url=None):
+    """Join voice call and start streaming"""
+    try:
+        from main import call_py, playing, played, collection
+        import datetime
+        
+        # Use stream_url if available, otherwise use yt_link
+        stream_source = stream_url if stream_url else yt_link
+        
+        # Set audio flags based on mode
+        audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
+        
+        # Start streaming
+        await call_py.play(
+            chat.id,
+            MediaStream(
+                stream_source,
+                AudioQuality.HIGH,
+                VideoQuality.HD_720p,
+                video_flags=audio_flags,
+                ytdlp_parameters='--cookies-from-browser chrome' if not stream_url else None
+            ),
+        )
+        
+        # Update playing status
+        playing[chat.id] = {
+            "title": title,
+            "duration": duration,
+            "mode": mode,
+            "yt_link": stream_source,
+            "chat": chat,
+            "by": by,
+            "thumb": thumb
+        }
+        
+        # Record play time
+        played[chat.id] = time.time()
+        
+        # Add to database for statistics
+        collection.update_one(
+            {"bot_id": message.session.me.id},
+            {"$push": {"dates": datetime.datetime.now()}},
+            upsert=True
+        )
+        
+        # Send now playing message
+        from config import queue_styles
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("▷", callback_data="resume"),
+                InlineKeyboardButton("II", callback_data="pause"),
+                InlineKeyboardButton("‣‣I", callback_data="skip"),
+                InlineKeyboardButton("▢", callback_data="end"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✖ Close",
+                    callback_data="close"
+                )
+            ],
+        ])
+        
+        # Extract video ID for YouTube link
+        video_id = extract_video_id(yt_link) if not os.path.exists(yt_link) else None
+        youtube_link_text = f"[{lightyagami(title)}](https://t.me/{message.session.me.username}?start=vidid_{video_id})" if video_id else lightyagami(title)
+        
+        await message.session.send_message(
+            chat.id,
+            queue_styles[int(1)].format(
+                lightyagami(mode),
+                youtube_link_text,
+                lightyagami(duration)
+            ),
+            reply_markup=keyboard,
+            disable_web_page_preview=True
+        )
+        
+        await message.delete()
+        
+    except Exception as e:
+        logger.error(f"Error in join_call: {e}")
+        await message.edit(f"❌ Error starting stream: {str(e)}")
+        raise
+
 temporary = {}
 active = []
 playing = {}

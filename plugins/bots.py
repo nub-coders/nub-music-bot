@@ -1726,7 +1726,7 @@ async def play_handler_func(client, message):
     elif len(input_text) == 2:
         search_query = input_text[1]
 
-        title, duration, youtube_link, thumbnail, channel_name, views, video_id = handle_youtube(search_query)
+        title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url = handle_youtube(search_query)
         if not youtube_link:
             try:
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")
@@ -1817,7 +1817,8 @@ async def play_handler_func(client, message):
         duration,
         mode,
         thumb,
-        force_play
+        force_play,
+        stream_url
     )
     if is_active and not force_play:
                 position = len(queues.get(message.chat.id)) if queues.get(target_chat.id) else 1
@@ -2045,7 +2046,8 @@ async def put_queue(
     duration,
 audio_flags,
 thumb,
-forceplay = False):
+forceplay = False,
+stream_url = None):
     try:
         duration_in_seconds = time_to_seconds(duration) - 3
     except:
@@ -2059,7 +2061,8 @@ forceplay = False):
         "chat": chat,
         "by": by,
         "session":client,
-        "thumb":thumb
+        "thumb":thumb,
+        "stream_url": stream_url
     }
     if forceplay:
         check = queues.get(chat.id)
