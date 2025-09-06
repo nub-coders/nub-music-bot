@@ -12,7 +12,7 @@ from pyrogram.errors.exceptions import SessionRevoked, UserDeactivatedBan, AuthK
 # Local modules
 from tools import *
 from config import *
-from version_checker import check_and_update_ytdlp
+from youtube import check_and_update_ytdlp
 
 # Initialize clients dictionary
 # Configure logging

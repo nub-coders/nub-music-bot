@@ -42,6 +42,7 @@ from config import *
 from pyrogram import Client, filters
 import gc
 import time
+from youtube import handle_youtube, handle_youtube_ytdlp, get_video_details, extract_video_id, format_number, format_duration, time_to_seconds
 
 from pyrogram.errors import (
     FloodWait,
@@ -122,186 +123,19 @@ def clear_directory(directory_path):
     print(f"Directory {directory_path} has been cleared.")
 
 import asyncio
-from yt_dlp import YoutubeDL
+
 from pyrogram import Client, filters
 from pyrogram import enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from yt_dlp import YoutubeDL
+
 import re
 
-def extract_video_id(url):
-    """
-    Extract YouTube video ID from various forms of YouTube URLs.
-
-    Args:
-        url (str): YouTube video URL
-
-    Returns:
-        str: Video ID or None if not found
-    """
-    try:
-        # Patterns for different types of YouTube URLs
-        patterns = [
-            r'(?:v=|/v/|youtu\.be/|/embed/)([^&?/]+)',  # Standard, shortened and embed URLs
-            r'(?:watch\?|/v/|youtu\.be/)([^&?/]+)',     # Watch URLs
-            r'(?:youtube\.com/|youtu\.be/)([^&?/]+)'    # Channel URLs
-        ]
-
-        # Try each pattern
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
-
-        return None
-
-    except Exception as e:
-        return f"Error extracting video ID: {str(e)}"
 
 
-def format_number(num):
-    """Format number to international system (K, M, B). Accepts only digits."""
-    if num is None:
-        return "N/A"
 
-    # If input is a string, check if it's digits only
-    if isinstance(num, str):
-        if not num.isdigit():
-            return "N/A"
-        num = int(num)
-
-    # If not int/float after conversion, reject
-    if not isinstance(num, (int, float)):
-        return "N/A"
-
-    if num < 1000:
-        return str(num)
-
-    magnitude = 0
-    while abs(num) >= 1000:
-        magnitude += 1
-        num /= 1000.0
-
-    # Add precision based on magnitude
-    if magnitude > 0:
-        num = round(num, 1)
-        if isinstance(num, float) and num.is_integer():
-            num = int(num)
-
-    return f"{num:g}{'KMB'[magnitude-1]}"
-
-def format_duration(seconds):
-    """Formats duration from seconds to HH:MM:SS or MM:SS"""
-    if not isinstance(seconds, (int, float)) or seconds < 0:
-        return "N/A"
-
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    secs = seconds % 60
-
-    if hours > 0:
-        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
-    else:
-        return f"{minutes:02d}:{secs:02d}"
 
 def get_video_details(video_id):
     """
-    Get video details using API first, then yt_dlp fallback
-
-    Args:
-        video_id (str): Video ID to fetch details for
-
-    Returns:
-        dict: Video details or error message
-    """
-    import api_client
-    import os
-    
-    # First try API if token is available
-    API_TOKEN = os.getenv('NUB_YTDLP_API')
-    if API_TOKEN:
-        try:
-            logger.info("Attempting API request for video details...")
-            api_result = api_client.get_video_info(video_id)
-            
-            if api_result and api_result[0] and api_result[0] != "N/A":
-                title, video_id_result, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
-                
-                # Format duration if it's in seconds
-                if isinstance(duration, int):
-                    duration = format_duration(duration)
-                
-                logger.info(f"API request successful, took {time_taken}")
-                return {
-                    'title': title,
-                    'thumbnail': thumbnail,
-                    'duration': duration,
-                    'view_count': views,
-                    'channel_name': channel_name,
-                    'video_url': youtube_link,
-                    'platform': 'YouTube',
-                    'stream_url': stream_url
-                }
-            else:
-                logger.warning("API returned invalid data, falling back to yt-dlp")
-        except Exception as e:
-            logger.error(f"API request failed: {e}, falling back to yt-dlp")
-    else:
-        logger.info("No API token found, using yt-dlp")
-
-    # Fallback to yt-dlp
-    try:
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True,
-            "cookiesfrombrowser": ("chrome",),
-        }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract initial info using ytsearch
-            search_result = ydl.extract_info(f"ytsearch:{video_id}", download=False)
-
-            if not search_result or 'entries' not in search_result or not search_result['entries']:
-                return {'error': 'No video found for the given ID'}
-
-            # Get the first entry from search results
-            video_info = search_result['entries'][0]
-
-            # Create YouTube URL from video ID
-            youtube_url = f"https://www.youtube.com/watch?v={video_info.get('id', video_id)}"
-
-            # Process duration
-            duration = 'N/A'
-            if video_info.get('duration'):
-                try:
-                    duration_seconds = int(video_info.get('duration'))
-                    duration = format_duration(duration_seconds)
-                except (ValueError, TypeError):
-                    duration = 'N/A'
-
-            # Get thumbnail URL
-            thumbnail = 'N/A'
-            if video_info.get('thumbnails'):
-                thumbnail = video_info['thumbnails'][-1].get('url', 'N/A')
-
-            # Prepare details dictionary
-            details = {
-                'title': video_info.get('title', 'N/A'),
-                'thumbnail': thumbnail,
-                'duration': duration,
-                'view_count': video_info.get('view_count', 'N/A'),
-                'channel_name': video_info.get('uploader', 'N/A'),
-                'video_url': youtube_url,
-                'platform': 'YouTube'
-            }
-
-            return details
-
-    except (yt_dlp.utils.ExtractorError, yt_dlp.utils.DownloadError) as youtube_error:
-        return {'error': f"YouTube extraction failed: {youtube_error}"}
-    except Exception as e:
-        return {'error': f"Unexpected error: {str(e)}"}
 
 import datetime
 import os
@@ -791,9 +625,6 @@ async def alpha_to_int(user_id_alphabet: str) -> int:
     return user_id
 
 
-def time_to_seconds(time):
-    stringt = str(time)
-    return sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
 
 
 def seconds_to_min(seconds):
@@ -1109,102 +940,11 @@ async def end(client, update):
   except Exception as e:
     logger.info(f"Error in end function: {e}")
 
-from yt_dlp import YoutubeDL
+
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
-async def handle_youtube_ytdlp(argument):
-    """
-    Helper function to get YouTube video info using yt-dlp.
 
-    Returns:
-        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
-    """
-    try:
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True, # Get basic info without downloading
-            'skip_download': True,
-            "cookiesfrombrowser": ("chrome",), # Optional: Use cookies from browser
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(argument, download=False)
-
-            if not info_dict:
-                return None
-
-            title = info_dict.get('title', 'N/A')
-            video_id = info_dict.get('id', 'N/A')
-            channel_name = info_dict.get('uploader', 'N/A')
-            views = info_dict.get('view_count', 'N/A')
-            youtube_link = f"https://www.youtube.com/watch?v={video_id}"
-
-            # Duration can be in seconds or a string, convert to seconds if needed
-            duration_raw = info_dict.get('duration', 0)
-            if isinstance(duration_raw, str):
-                try:
-                    duration_sec = time_to_seconds(duration_raw)
-                except:
-                    duration_sec = 0
-            else:
-                duration_sec = int(duration_raw) if duration_raw else 0
-            
-            duration_formatted = format_duration(duration_sec)
-
-            thumbnail_url = 'N/A'
-            if 'thumbnails' in info_dict and info_dict['thumbnails']:
-                 thumbnail_url = info_dict['thumbnails'][-1]['url']
-
-
-            return (title, duration_formatted, youtube_link, thumbnail_url, channel_name, views, video_id)
-
-    except Exception as e:
-        logger.error(f"Error in handle_youtube_ytdlp: {e}")
-        return None
-
-async def handle_youtube(argument):
-    """
-    Main function to get YouTube video information.
-    Prioritizes API calls, falls back to yt-dlp.
-
-    Returns:
-        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
-    """
-    from api_client import get_video_info, API_TOKEN
-
-    # First try API if token is available
-    if API_TOKEN:
-        try:
-            logger.info("Attempting API request for video info...")
-            api_result = get_video_info(argument)
-
-            if api_result and api_result[0] and api_result[0] != "N/A":
-                title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
-
-                # Format duration if it's in seconds
-                if isinstance(duration, int):
-                    duration = format_duration(duration)
-
-                logger.info(f"API request successful, took {time_taken}")
-                return (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
-            else:
-                logger.warning("API returned invalid data, falling back to yt-dlp")
-        except Exception as e:
-            logger.error(f"API request failed: {e}, falling back to yt-dlp")
-    else:
-        logger.info("No API token found, using yt-dlp")
-
-    # Fallback to yt-dlp
-    result = handle_youtube_ytdlp(argument)
-
-    # If yt-dlp fails, return error values
-    if not result:
-        logger.error("Both API and yt-dlp failed")
-        return ("Error", "00:00", None, None, None, None, None, None)
-
-    # Add None for stream_url since yt-dlp doesn't provide it
-    return result + (None,)
 
 
 async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
