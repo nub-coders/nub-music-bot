@@ -158,24 +158,34 @@ def extract_video_id(url):
 
 
 def format_number(num):
-    """Format number to international system (K, M, B)"""
+    """Format number to international system (K, M, B). Accepts only digits."""
     if num is None:
         return "N/A"
-    
+
+    # If input is a string, check if it's digits only
+    if isinstance(num, str):
+        if not num.isdigit():
+            return "N/A"
+        num = int(num)
+
+    # If not int/float after conversion, reject
+    if not isinstance(num, (int, float)):
+        return "N/A"
+
     if num < 1000:
         return str(num)
-    
+
     magnitude = 0
     while abs(num) >= 1000:
         magnitude += 1
         num /= 1000.0
-    
+
     # Add precision based on magnitude
     if magnitude > 0:
         num = round(num, 1)
-        if num.is_integer():
+        if isinstance(num, float) and num.is_integer():
             num = int(num)
-    
+
     return f"{num:g}{'KMB'[magnitude-1]}"
 
 import yt_dlp
