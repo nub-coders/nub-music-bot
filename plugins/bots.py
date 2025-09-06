@@ -1049,8 +1049,6 @@ async def user_client_start_handler(client, message):
             if isinstance(video_info, dict):
                 # Format numbers
                 views = format_number(video_info['view_count'])
-                likes = format_number(video_info['like_count'])
-                subs = format_number(video_info['subscriber_count'])
                 
                 # Create formatted message
                 logger.info(video_info['thumbnail'])
