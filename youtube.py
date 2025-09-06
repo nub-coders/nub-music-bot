@@ -235,14 +235,12 @@ def get_video_details(video_id):
     Returns:
         dict: Video details or error message
     """
-    import api_client
     
     # First try API if token is available
-    API_TOKEN = os.getenv('NUB_YTDLP_API')
     if API_TOKEN:
         try:
             logger.info("Attempting API request for video details...")
-            api_result = api_client.get_video_info(video_id)
+            api_result = get_video_info(video_id)
             
             if api_result and api_result[0] and api_result[0] != "N/A":
                 title, video_id_result, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
