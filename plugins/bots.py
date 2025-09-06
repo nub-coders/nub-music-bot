@@ -1412,14 +1412,6 @@ async def blocklist_handler(client, message):
     await message.reply_text(blocklist_text)
 
 
-async def check_assistant(client, message):
-   if not client.me.username in active:
-      await message.reply(f"No userbot detected\nstopping the bot")
-      await client.stop(block=False)
-
-
-
-
 from pytgcalls import filters as call_filters
 
 def currently_playing(client, message):
