@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 API_TOKEN = os.getenv('NUB_YTDLP_API')
 BASE_URL = 'http://api.nub-coder.tech'
 
-def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, int, str, str, int, str, str, str]:
+def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[Optional[str], Optional[str], Optional[int], Optional[str], Optional[str], Optional[int], Optional[str], Optional[str], str]:
     """Get video info - returns (title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken)"""
     try:
         response = requests.get(
@@ -25,7 +25,7 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
         data = response.json()
         
         if 'error' in data:
-            return None, None, None, None, None, None, None, None, data.get('error')
+            return None, None, None, None, None, None, None, None, data.get('error', 'Unknown error')
         
         return (
             data.get('title', 'N/A'),
