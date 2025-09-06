@@ -3085,11 +3085,8 @@ async def info_command(client: Client, message: Message):
     if not sender_id == OWNER_ID:
         return await message.reply_text("Only bot owner is allowed to perform this command")
 
-    sender_id = message.from_user.id
-    if not sender_id == OWNER_ID:
-        return await message.reply_text("Only bot owner is allowed to perform this command")
-
-    if len(message.command) < 2:
+    if len(message.command) >= 2:
+        user_input = message.command[1]
         try:
             # Try to get user by ID first
             if user_input.isdigit():

@@ -234,43 +234,55 @@ def get_video_details(video_id):
     Returns:
         dict: Video details or error message
     """
-    # Try YouTube first
     try:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat':True,
-       "cookiesfrombrowser": ("chrome",),
+            'extract_flat': True,
+            "cookiesfrombrowser": ("chrome",),
         }
-
-        # Try YouTube URL first
-        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract initial info
-            info = ydl.extract_info(f"ytsearch:{video_id}", download=False)
-
-            # Process upload date
-
+            # Extract initial info using ytsearch
+            search_result = ydl.extract_info(f"ytsearch:{video_id}", download=False)
+            
+            if not search_result or 'entries' not in search_result or not search_result['entries']:
+                return {'error': 'No video found for the given ID'}
+            
+            # Get the first entry from search results
+            video_info = search_result['entries'][0]
+            
+            # Create YouTube URL from video ID
+            youtube_url = f"https://www.youtube.com/watch?v={video_info.get('id', video_id)}"
+            
             # Process duration
             duration = 'N/A'
-            if info.get('duration'):
+            if video_info.get('duration'):
                 try:
-                    duration = str(
-                        datetime.datetime.fromtimestamp(
-                            info.get('duration')
-                        ).strftime('%H:%M:%S')
-                    )
+                    duration_seconds = int(video_info.get('duration'))
+                    hours = duration_seconds // 3600
+                    minutes = (duration_seconds % 3600) // 60
+                    seconds = duration_seconds % 60
+                    
+                    if hours > 0:
+                        duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    else:
+                        duration = f"{minutes:02d}:{seconds:02d}"
                 except (ValueError, TypeError):
                     duration = 'N/A'
 
+            # Get thumbnail URL
+            thumbnail = 'N/A'
+            if video_info.get('thumbnails'):
+                thumbnail = video_info['thumbnails'][-1].get('url', 'N/A')
+
             # Prepare details dictionary
             details = {
-                'title': info.get('title', 'N/A'),
-                'thumbnail': info["entries"][0]["thumbnails"][-1]["url"],
+                'title': video_info.get('title', 'N/A'),
+                'thumbnail': thumbnail,
                 'duration': duration,
-                'view_count': info.get('view_count', 'N/A'),
-                'channel_name': info.get('uploader', 'N/A'),
+                'view_count': video_info.get('view_count', 'N/A'),
+                'channel_name': video_info.get('uploader', 'N/A'),
                 'video_url': youtube_url,
                 'platform': 'YouTube'
             }
@@ -278,10 +290,9 @@ def get_video_details(video_id):
             return details
 
     except (yt_dlp.utils.ExtractorError, yt_dlp.utils.DownloadError) as youtube_error:
-        # Return error details if YouTube extraction fails
-        return {
-            'error': f"YouTube extraction failed: {youtube_error}"
-        }
+        return {'error': f"YouTube extraction failed: {youtube_error}"}
+    except Exception as e:
+        return {'error': f"Unexpected error: {str(e)}"}
 
 import datetime
 import os
