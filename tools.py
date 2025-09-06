@@ -238,7 +238,7 @@ def get_video_details(video_id):
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extract initial info
-            info = ydl.extract_info(search_url = f"ytsearch:{video_id}", download=False)
+            info = ydl.extract_info(f"ytsearch:{video_id}", download=False)
 
             # Process upload date
             upload_date = parse_and_format_date(info.get('upload_date'))
