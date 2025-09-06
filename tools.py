@@ -134,9 +134,6 @@ import re
 
 
 
-def get_video_details(video_id):
-    """
-
 import datetime
 import os
 import magic
