@@ -251,7 +251,6 @@ def get_video_details(video_id):
             info = ydl.extract_info(f"ytsearch:{video_id}", download=False)
 
             # Process upload date
-            upload_date = parse_and_format_date(info.get('upload_date'))
 
             # Process duration
             duration = 'N/A'
