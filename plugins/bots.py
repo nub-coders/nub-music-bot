@@ -216,13 +216,16 @@ async def active_chats(client, message):
     if not is_authorized:
         return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
-    active_chats_list = active
-    if active_chats_list:
+    # Use PyTgCalls.calls to get active calls directly
+    active_calls = call_py.calls
+    
+    if active_calls:
         titles = []
-        for chat_id in active_chats_list:
+        for chat_id in active_calls.keys():
             try:
                 chat = await client.get_chat(chat_id)
-                title = f"• {chat.title}"
+                call_status = "🔴 Active" if active_calls[chat_id].status else "⏸️ Paused"
+                title = f"• {chat.title} - {call_status}"
             except Exception as e:
                 title = f"• [ID: {chat_id}] (Failed to fetch title)"
             titles.append(title)
@@ -231,7 +234,7 @@ async def active_chats(client, message):
         reply_text = (
             f"<b>Active group calls:</b>\n"
             f"<blockquote expandable>{titles_str}</blockquote>\n"
-            f"<b>Total:</b> {len(active_chats_list)}"
+            f"<b>Total:</b> {len(active_calls)}"
         )
     else:
         reply_text = "<b>Active Voice Chats:</b>\n<blockquote>No active group calls</blockquote>"
