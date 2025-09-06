@@ -238,7 +238,7 @@ def get_video_details(video_id):
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extract initial info
-            info = ydl.extract_info(youtube_url, download=False)
+            info = ydl.extract_info(search_url = f"ytsearch:{video_id}", download=False)
 
             # Process upload date
             upload_date = parse_and_format_date(info.get('upload_date'))
@@ -258,10 +258,9 @@ def get_video_details(video_id):
             # Prepare details dictionary
             details = {
                 'title': info.get('title', 'N/A'),
-                'thumbnail': info.get('thumbnail', 'N/A'),
+                'thumbnail': info["entries"][0]["thumbnails"]
                 'duration': duration,
                 'view_count': info.get('view_count', 'N/A'),
-                'like_count': info.get('like_count', 'N/A'),
                 'channel_name': info.get('uploader', 'N/A'),
                 'subscriber_count': info.get('channel_follower_count', 'N/A'),
                 'upload_date': upload_date,
