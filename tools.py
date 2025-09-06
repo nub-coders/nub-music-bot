@@ -206,7 +206,7 @@ def format_duration(seconds):
 
 def get_video_details(video_id):
     """
-    Get video details using yt_dlp
+    Get video details using API first, then yt_dlp fallback
 
     Args:
         video_id (str): Video ID to fetch details for
@@ -214,6 +214,42 @@ def get_video_details(video_id):
     Returns:
         dict: Video details or error message
     """
+    import api_client
+    import os
+    
+    # First try API if token is available
+    API_TOKEN = os.getenv('NUB_YTDLP_API')
+    if API_TOKEN:
+        try:
+            logger.info("Attempting API request for video details...")
+            api_result = api_client.get_video_info(video_id)
+            
+            if api_result and api_result[0] and api_result[0] != "N/A":
+                title, video_id_result, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
+                
+                # Format duration if it's in seconds
+                if isinstance(duration, int):
+                    duration = format_duration(duration)
+                
+                logger.info(f"API request successful, took {time_taken}")
+                return {
+                    'title': title,
+                    'thumbnail': thumbnail,
+                    'duration': duration,
+                    'view_count': views,
+                    'channel_name': channel_name,
+                    'video_url': youtube_link,
+                    'platform': 'YouTube',
+                    'stream_url': stream_url
+                }
+            else:
+                logger.warning("API returned invalid data, falling back to yt-dlp")
+        except Exception as e:
+            logger.error(f"API request failed: {e}, falling back to yt-dlp")
+    else:
+        logger.info("No API token found, using yt-dlp")
+
+    # Fallback to yt-dlp
     try:
         ydl_opts = {
             'quiet': True,
