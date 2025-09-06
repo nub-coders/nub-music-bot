@@ -1,12 +1,35 @@
-modules = ["python-3.12", "bash"]
+modules = ["bash", "python-3.11"]
 run = "node index.js"
 
 [nix]
 channel = "stable-24_05"
-packages = ["cacert", "cargo", "file", "freetype", "glibcLocales", "libGL", "libiconv", "libmediainfo", "libuv", "rustc", "xcodebuild", "zlib"]
+packages = ["cacert", "cargo", "file", "freetype", "glibcLocales", "lcms2", "libGL", "libiconv", "libimagequant", "libjpeg", "libmediainfo", "libtiff", "libuv", "libwebp", "libxcrypt", "openjpeg", "openssl", "rustc", "tcl", "tk", "xcodebuild", "zlib"]
 
 [deployment]
 run = ["sh", "-c", "node index.js"]
 
 [agent]
 expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Bot"
+
+[[workflows.workflow]]
+name = "Bot"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
