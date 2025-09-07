@@ -1722,7 +1722,7 @@ async def play_handler_func(client, message):
     elif len(input_text) == 2:
         search_query = input_text[1]
 
-        title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url = handle_youtube(search_query)
+        title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url = await handle_youtube(search_query)
         if not youtube_link:
             try:
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")
