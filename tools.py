@@ -932,7 +932,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         
         # Determine the URL to use for streaming
         stream_source = stream_url if stream_url else youtube_link
-        
+        print(stream_source)
         if not stream_source:
             logger.error("No stream source provided (neither stream_url nor youtube_link)")
             await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
