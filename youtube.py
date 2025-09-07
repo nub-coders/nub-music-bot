@@ -20,7 +20,9 @@ BASE_URL = 'http://api.nub-coder.tech'
 
 def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, int, str, str, int, str, str, str]:
     """Get video info - returns (title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken)"""
+    logger.info(f"Getting video info for: {url_or_query[:50]}{'...' if len(url_or_query) > 50 else ''}")
     try:
+        logger.debug(f"Making API request to {BASE_URL}/info with max_results={max_results}")
         response = requests.get(
             f'{BASE_URL}/info',
             params={'token': API_TOKEN, 'q': url_or_query, 'max_results': max_results},
@@ -28,10 +30,13 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
         )
         response.raise_for_status()
         data = response.json()
+        logger.debug(f"API response status: {response.status_code}")
 
         if 'error' in data:
+            logger.error(f"API returned error: {data.get('error')}")
             return None, None, None, None, None, None, None, None, data.get('error')
         
+        logger.info(f"Successfully retrieved video info: {data.get('title', 'N/A')}")
         return (
             data.get('title', 'N/A'),
             data.get('video_id', 'N/A'),
@@ -44,11 +49,14 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
             data.get('time_taken', 'N/A')
         )
     except requests.RequestException as e:
+        logger.error(f"Request failed for video info: {str(e)}")
         return None, None, None, None, None, None, None, None, str(e)
 
 def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str, int, int, str, str]]:
     """Search videos - returns list of (title, video_id, channel_name, duration, views, thumbnail_url, youtube_link)"""
+    logger.info(f"Searching videos for query: {query[:50]}{'...' if len(query) > 50 else ''} (max_results={max_results})")
     try:
+        logger.debug(f"Making search API request to {BASE_URL}/search")
         response = requests.get(
             f'{BASE_URL}/search',
             params={'q': query, 'max_results': max_results},
@@ -56,8 +64,10 @@ def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str,
         )
         response.raise_for_status()
         data = response.json()
+        logger.debug(f"Search API response status: {response.status_code}")
 
         if 'error' in data:
+            logger.error(f"Search API returned error: {data.get('error')}")
             return []
         
         results = []
@@ -71,12 +81,15 @@ def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str,
                 video.get('thumbnail', 'N/A'),
                 video.get('youtube_link', 'N/A')
             ))
+        logger.info(f"Found {len(results)} video results")
         return results
     except requests.RequestException as e:
+        logger.error(f"Search request failed: {str(e)}")
         return []
 
 def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
     """Get quota status - returns (daily_limit, requests_used, requests_remaining, is_admin, reset_time)"""
+    logger.debug("Checking rate limit status")
     try:
         response = requests.get(
             f'{BASE_URL}/rate-limit-status',
@@ -85,6 +98,10 @@ def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
         )
         response.raise_for_status()
         data = response.json()
+        
+        remaining = data.get('requests_remaining', 0)
+        used = data.get('requests_used', 0)
+        logger.info(f"Rate limit status - Used: {used}, Remaining: {remaining}")
 
         return (
             data.get('daily_limit', 0),
@@ -94,6 +111,7 @@ def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
             data.get('reset_time', 'N/A')
         )
     except requests.RequestException as e:
+        logger.error(f"Failed to get rate limit status: {str(e)}")
         return 0, 0, 0, False, str(e)
 
 def extract_video_id(url):
@@ -106,6 +124,7 @@ def extract_video_id(url):
     Returns:
         str: Video ID or None if not found
     """
+    logger.debug(f"Extracting video ID from URL: {url}")
     try:
         # Patterns for different types of YouTube URLs
         patterns = [
@@ -115,36 +134,44 @@ def extract_video_id(url):
         ]
 
         # Try each pattern
-        for pattern in patterns:
+        for i, pattern in enumerate(patterns):
             match = re.search(pattern, url)
             if match:
-                return match.group(1)
+                video_id = match.group(1)
+                logger.debug(f"Video ID extracted using pattern {i+1}: {video_id}")
+                return video_id
 
+        logger.warning(f"No video ID found in URL: {url}")
         return None
 
     except Exception as e:
+        logger.error(f"Error extracting video ID from {url}: {str(e)}")
         return f"Error extracting video ID: {str(e)}"
 
 
 def format_number(num):
     """Format number to international system (K, M, B). Accepts only digits."""
     if num is None:
+        logger.debug("format_number received None, returning N/A")
         return "N/A"
 
     # If input is a string, check if it's digits only
     if isinstance(num, str):
         if not num.isdigit():
+            logger.debug(f"format_number received non-digit string: {num}")
             return "N/A"
         num = int(num)
 
     # If not int/float after conversion, reject
     if not isinstance(num, (int, float)):
+        logger.debug(f"format_number received invalid type: {type(num)}")
         return "N/A"
 
     if num < 1000:
         return str(num)
 
     magnitude = 0
+    original_num = num
     while abs(num) >= 1000:
         magnitude += 1
         num /= 1000.0
@@ -155,11 +182,14 @@ def format_number(num):
         if isinstance(num, float) and num.is_integer():
             num = int(num)
 
-    return f"{num:g}{'KMB'[magnitude-1]}"
+    formatted = f"{num:g}{'KMB'[magnitude-1]}"
+    logger.debug(f"Formatted number {original_num} to {formatted}")
+    return formatted
 
 def format_duration(seconds):
     """Formats duration from seconds to HH:MM:SS or MM:SS"""
     if not isinstance(seconds, (int, float)) or seconds < 0:
+        logger.debug(f"format_duration received invalid input: {seconds} (type: {type(seconds)})")
         return "N/A"
 
     hours = seconds // 3600
@@ -167,13 +197,23 @@ def format_duration(seconds):
     secs = seconds % 60
 
     if hours > 0:
-        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+        formatted = f"{hours:02d}:{minutes:02d}:{secs:02d}"
     else:
-        return f"{minutes:02d}:{secs:02d}"
+        formatted = f"{minutes:02d}:{secs:02d}"
+    
+    logger.debug(f"Formatted duration {seconds}s to {formatted}")
+    return formatted
 
 def time_to_seconds(time):
     stringt = str(time)
-    return sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
+    logger.debug(f"Converting time {stringt} to seconds")
+    try:
+        seconds = sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
+        logger.debug(f"Converted {stringt} to {seconds} seconds")
+        return seconds
+    except Exception as e:
+        logger.error(f"Error converting time {stringt} to seconds: {str(e)}")
+        return 0
 
 def is_ytdlp_updated():
     """Check if yt-dlp is up to date"""
