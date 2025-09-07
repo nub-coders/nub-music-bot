@@ -225,8 +225,7 @@ async def active_chats(client, message):
         for chat_id in active_calls.keys():
             try:
                 chat = await client.get_chat(chat_id)
-                call_status = "🔴 Active" if active_calls[chat_id].status else "⏸️ Paused"
-                title = f"• {chat.title} - {call_status}"
+                title = f"• {chat.title}"
             except Exception as e:
                 title = f"• [ID: {chat_id}] (Failed to fetch title)"
             titles.append(title)
