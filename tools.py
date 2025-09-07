@@ -904,7 +904,8 @@ async def end(client, update):
           next_song['by'], 
           next_song['duration'], 
           next_song['mode'], 
-          next_song['thumb']
+          next_song['thumb'],
+          next_song.get('stream_url')
       )
     else:
       logger.info(f"Song queue for chat {update.chat_id} is empty.")
