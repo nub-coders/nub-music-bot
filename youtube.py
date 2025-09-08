@@ -369,6 +369,7 @@ async def handle_youtube_ytdlp(argument):
         tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
     """
     try:
+        is_url = re.match(r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+", argument)
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
@@ -377,7 +378,10 @@ async def handle_youtube_ytdlp(argument):
             "cookiesfrombrowser": ("chrome",), # Optional: Use cookies from browser
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(argument, download=False)
+            if is_url:
+                 info_dict = ydl.extract_info(argument, download=False)
+            else:
+               info_dict= ydl.extract_info(f"ytsearch:{argument}", download=False)['entries'][0]
 
             if not info_dict:
                 return None
