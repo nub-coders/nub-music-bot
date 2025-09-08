@@ -37,7 +37,6 @@ ffmpeg
 uvloop
 reportlab
 aiohttp
-pyrogram
 aiofiles
 aiohttp
 certifi
@@ -57,7 +56,6 @@ psutil
 py-tgcalls
 pymediainfo
 pymongo
-pyrogram
 pyrotgfork
 python-ffmpeg
 python-magic
