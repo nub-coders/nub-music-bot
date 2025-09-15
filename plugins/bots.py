@@ -39,6 +39,30 @@ from fonts import *
 from tools import *
 from youtube import handle_youtube, extract_video_id, format_duration
 
+def trim_title(title):
+    """
+    Trim video title to 25 characters or 6 words, whichever is shorter.
+    
+    Args:
+        title (str): The original video title
+        
+    Returns:
+        str: The trimmed title
+    """
+    if not title:
+        return ""
+    
+    # Split into words and take maximum 6 words
+    words = title.split()
+    if len(words) > 6:
+        title = " ".join(words[:6])
+    
+    # If still longer than 25 characters, truncate
+    if len(title) > 25:
+        title = title[:25].rstrip()
+    
+    return title
+
 async def end(client, update):
     """Handle stream end event"""
     chat_id = update.chat_id
@@ -1640,7 +1664,7 @@ async def play_handler_func(client, message):
         if media_msg.video:
             media = media_msg.video
             media_type = "video"
-            title = media.file_name or "Telegram Video"
+            title = trim_title(media.file_name or "Telegram Video")
             duration = media.duration
             if media.thumbs:
                 thumbnail = await client.download_media(media.thumbs[0].file_id)
@@ -1649,7 +1673,7 @@ async def play_handler_func(client, message):
         elif media_msg.audio:
             media = media_msg.audio
             media_type = "audio"
-            title = media.title or "Telegram Audio"
+            title = trim_title(media.title or "Telegram Audio")
             duration = media.duration
             if media.thumbs:
                 thumbnail = await client.download_media(media.thumbs[0].file_id)
@@ -1658,14 +1682,14 @@ async def play_handler_func(client, message):
         elif media_msg.voice:
             media = media_msg.voice
             media_type = "voice"
-            title = "Voice Message"
+            title = trim_title("Voice Message")
             duration = media.duration
 
         # Video note handling
         elif media_msg.video_note:
             media = media_msg.video_note
             media_type = "video_note"
-            title = "Video Note"
+            title = trim_title("Video Note")
             duration = media.duration
             if media.thumbs:
                 thumbnail = await client.download_media(media.thumbs[0].file_id)
@@ -1676,11 +1700,11 @@ async def play_handler_func(client, message):
             if doc.mime_type:
                 if doc.mime_type.startswith("video/"):
                     media_type = "video"
-                    title = doc.file_name or "Telegram Video"
+                    title = trim_title(doc.file_name or "Telegram Video")
                     duration = getattr(doc, 'duration', 0)  # duration might not always be available
             elif doc.mime_type.startswith("audio/"):
                      media_type = "audio"
-                     title = doc.file_name or "Telegram Audio"
+                     title = trim_title(doc.file_name or "Telegram Audio")
                      duration = getattr(doc, 'duration', 0)
 
 
@@ -1723,6 +1747,7 @@ async def play_handler_func(client, message):
         search_query = input_text[1]
 
         title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url = await handle_youtube(search_query)
+        title = trim_title(title)
         if not youtube_link:
             try:
                 await massage.edit(f"{upper_mono('No matching query found, please retry!')}")
