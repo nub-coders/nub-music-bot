@@ -922,8 +922,34 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 
+def trim_title(title):
+    """
+    Trim video title to 25 characters or 6 words, whichever is shorter.
+    
+    Args:
+        title (str): The original video title
+        
+    Returns:
+        str: The trimmed title
+    """
+    if not title:
+        return ""
+    
+    # Split into words and take maximum 6 words
+    words = title.split()
+    if len(words) > 6:
+        title = " ".join(words[:6])
+    
+    # If still longer than 25 characters, truncate
+    if len(title) > 25:
+        title = title[:25].rstrip()
+    
+    return title
+
 async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
     """Join voice call and start streaming"""
+    # Trim the title to ensure it meets the length requirements
+    title = trim_title(title)
     try:
         chat_id = chat.id
         # Set audio flags based on mode

@@ -38,30 +38,7 @@ from config import *
 from fonts import *
 from tools import *
 from youtube import handle_youtube, extract_video_id, format_duration
-
-def trim_title(title):
-    """
-    Trim video title to 25 characters or 6 words, whichever is shorter.
-    
-    Args:
-        title (str): The original video title
-        
-    Returns:
-        str: The trimmed title
-    """
-    if not title:
-        return ""
-    
-    # Split into words and take maximum 6 words
-    words = title.split()
-    if len(words) > 6:
-        title = " ".join(words[:6])
-    
-    # If still longer than 25 characters, truncate
-    if len(title) > 25:
-        title = title[:25].rstrip()
-    
-    return title
+from tools import trim_title
 
 async def end(client, update):
     """Handle stream end event"""
@@ -1652,6 +1629,9 @@ async def play_handler_func(client, message):
 
     youtube_link = None
     media_info = {}
+    
+    # Initialize title with a safe default to prevent unbound variable issues
+    title = trim_title("Unknown Media")
 
     # Check if replied to media message
     if message.reply_to_message and message.reply_to_message.media:
@@ -1830,7 +1810,7 @@ async def play_handler_func(client, message):
 
     await put_queue(
         massage,
-        title,
+        trim_title(title),
         client,
         youtube_link,
         target_chat,
@@ -1857,7 +1837,7 @@ async def play_handler_func(client, message):
             )
         ],
         ])
-                await client.send_message(message.chat.id, queue_styles[int(11)].format(lightyagami(mode), f"[{lightyagami(title)}](https://t.me/{client.me.username}?start=vidid_{extract_video_id(youtube_link)})" if not os.path.exists(youtube_link) else  lightyagami(title), lightyagami(duration), position), reply_markup=keyboard,disable_web_page_preview=True)
+                await client.send_message(message.chat.id, queue_styles[int(11)].format(lightyagami(mode), f"[{lightyagami(trim_title(title))}](https://t.me/{client.me.username}?start=vidid_{extract_video_id(youtube_link)})" if not os.path.exists(youtube_link) else  lightyagami(trim_title(title)), lightyagami(duration), position), reply_markup=keyboard,disable_web_page_preview=True)
                 try:
                    await message.delete()
                 except:
@@ -1895,7 +1875,7 @@ stream_url = None):
         duration_in_seconds = 0
     put = {
         "message": message,
-        "title": title,
+        "title": trim_title(title),
         "duration": duration,
         "mode": audio_flags,
         "yt_link": yt_link,
