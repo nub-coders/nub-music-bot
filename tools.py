@@ -937,12 +937,12 @@ def trim_title(title):
     
     # Split into words and take maximum 6 words
     words = title.split()
-    if len(words) > 6:
-        title = " ".join(words[:6])
+    if len(words) > 10:
+        title = " ".join(words[:10])
     
     # If still longer than 25 characters, truncate
-    if len(title) > 25:
-        title = title[:25].rstrip()
+    if len(title) > 30:
+        title = title[:30].rstrip()
     
     return title
 
