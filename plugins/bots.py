@@ -775,11 +775,10 @@ async def show_sudo_list(client, message):
 
     if not is_authorized:
         return await message.reply("**MF\n\nTHIS IS PAID OWNER'S COMMAND...**")
-
     try:
         # Get all users who have SUDOERS field
-    users_data = await find_one(user_sessions, {"bot_id": client.me.id})
-    sudo_users = users_data.get("SUDOERS", []) if users_data else []
+        users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+        sudo_users = users_data.get("SUDOERS", []) if users_data else []
 
         if not sudo_users:
             return await message.reply("No sudo users found in the database.")
