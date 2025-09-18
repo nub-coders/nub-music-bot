@@ -743,7 +743,8 @@ async def show_sudo_list(client, message):
 
     try:
         # Get all users who have SUDOERS field
-        sudo_users = user_sessions.find_one({"bot_id": client.me.id}).get("SUDOERS", []) if user_sessions.find_one({"bot_id": client.me.id}) else []
+    users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+    sudo_users = users_data.get("SUDOERS", []) if users_data else []
 
         if not sudo_users:
             return await message.reply("No sudo users found in the database.")
@@ -805,17 +806,10 @@ async def add_to_sudo(client, message):
             # Check if trying to add self or bot
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self:
                 # Get current sudo users
-                users_data = user_sessions.find_one({"bot_id": client.me.id})
-
-                sudoers = users_data.get("SUDOERS", [])
-
+                users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+                sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if replied_user_id not in sudoers:
-                    # Add user to sudoers
-                    user_sessions.update_one(
-                        {"bot_id": client.me.id},
-                        {"$push": {"SUDOERS": replied_user_id}},
-                        upsert=True
-                    )
+                    asyncio.create_task(push_to_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", replied_user_id, upsert=True))
                     await message.reply(f"User {replied_user_id} has been added to sudoers list.")
                     SUDO.append(replied_user_id)
                 else:
@@ -839,17 +833,10 @@ async def add_to_sudo(client, message):
                             return await message.reply(f"**This user is already an owner!**")
 
                 # Get current sudo users
-                users_data = user_sessions.find_one({"bot_id": client.me.id})
-
-                sudoers = users_data.get("SUDOERS", [])
-
+                users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+                sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if target_user_id not in sudoers:
-                    # Add user to sudoers
-                    user_sessions.update_one(
-                        {"bot_id": client.me.id},
-                        {"$push": {"SUDOERS": target_user_id}},
-                        upsert=True
-                    )
+                    asyncio.create_task(push_to_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", target_user_id, upsert=True))
                     await message.reply(f"User {target_user_id} has been added to sudoers list.")
                     SUDO.append(target_user_id)
                 else:
@@ -893,18 +880,12 @@ async def remove_from_sudo(client, message):
             # Check if trying to remove self or bot
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self:
                 # Get current sudo users
-                users_data = user_sessions.find_one({"bot_id": client.me.id})
+                users_data = await find_one(user_sessions, {"bot_id": client.me.id})
                 if not users_data:
                     return await message.reply(f"User {replied_user_id} is not in the database.")
-
-                sudoers = users_data.get("SUDOERS", [])
-
+                sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if replied_user_id in sudoers:
-                    # Remove user from sudoers
-                    user_sessions.update_one(
-                        {"bot_id": client.me.id},
-                        {"$pull": {"SUDOERS": replied_user_id}}
-                    )
+                    asyncio.create_task(pull_from_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", replied_user_id))
                     await message.reply(f"User {replied_user_id} has been removed from sudoers list.")
                     SUDO.remove(replied_user_id)
                 else:
@@ -928,18 +909,12 @@ async def remove_from_sudo(client, message):
                             return await message.reply(f"**Cannot remove an owner from sudo list!**")
 
                 # Get current sudo users
-                users_data = user_sessions.find_one({"bot_id": client.me.id})
+                users_data = await find_one(user_sessions, {"bot_id": client.me.id})
                 if not users_data:
                     return await message.reply(f"User {target_user_id} is not in the database.")
-
-                sudoers = users_data.get("SUDOERS", [])
-
+                sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if target_user_id in sudoers:
-                    # Remove user from sudoers
-                    user_sessions.update_one(
-                        {"bot_id": client.me.id},
-                        {"$pull": {"SUDOERS": target_user_id}}
-                    )
+                    asyncio.create_task(pull_from_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", target_user_id))
                     await message.reply(f"User {target_user_id} has been removed from sudoers list.")
                     SUDO.remove(target_user_id)
                 else:
@@ -1009,22 +984,16 @@ async def send_log_message(client, log_group_id, message, is_private):
 @Client.on_message(filters.command("start") | (filters.group & create_custom_filter))
 async def user_client_start_handler(client, message):
     user_id = message.chat.id
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     is_private = message.chat.type == enums.ChatType.PRIVATE
     should_log = False
     if user_data:
         users = user_data.get('users', {})
         if not user_id in users:
-                collection.update_one({"bot_id": client.me.id},
-                                        {"$push": {'users': user_id}},
-                                        upsert=True
-                                    )
-                should_log = True
+            asyncio.create_task(push_to_array(collection, {"bot_id": client.me.id}, 'users', user_id, upsert=True))
+            should_log = True
     else:
-        collection.update_one({"bot_id": client.me.id},
-                                        {"$set": {'users': [user_id]}},
-                                        upsert=True
-                                    )
+        asyncio.create_task(set_fields(collection, {"bot_id": client.me.id}, {'users': [user_id]}, upsert=True))
         should_log = True
     if should_log:
         log_group = LOGGER_ID
