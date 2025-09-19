@@ -1,38 +1,4 @@
-from PIL import Image, ImageDraw, ImageFont
-# Add /queue command to show up to 20 items in queue as a photo with brown background
-@Client.on_message(filters.command("queue"))
-async def queue_command(client, message):
-    chat_id = message.chat.id
-    queue_list = queues.get(chat_id, [])
-    items = queue_list[:20]
-    if not items:
-        return await message.reply("Queue is empty.")
 
-    # Prepare text for queue
-    text_lines = [f"Queue for this chat (max 20):\n"]
-    for idx, item in enumerate(items, 1):
-        title = item.get("title", "Unknown")
-        duration = item.get("duration", "-")
-        text_lines.append(f"{idx}. {title} | {duration}")
-    text = "\n".join(text_lines)
-
-    # Create brown background image
-    width, height = 800, 600
-    img = Image.new("RGB", (width, height), (150, 75, 0))  # brown
-    draw = ImageDraw.Draw(img)
-    try:
-        font = ImageFont.truetype("arial.ttf", 32)
-    except:
-        font = ImageFont.load_default()
-    draw.multiline_text((40, 40), text, fill="white", font=font, spacing=8)
-
-    # Save to bytes
-    from io import BytesIO
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
-    await message.reply_photo(photo=buf, caption="Current Queue")
 import asyncio
 import base64
 import datetime
@@ -212,7 +178,41 @@ create_custom_filter = filters.create(lambda _, __, message: any(m.is_self for m
 
 # Auth handler
 
+from PIL import Image, ImageDraw, ImageFont
+# Add /queue command to show up to 20 items in queue as a photo with brown background
+@Client.on_message(filters.command("queue"))
+async def queue_command(client, message):
+    chat_id = message.chat.id
+    queue_list = queues.get(chat_id, [])
+    items = queue_list[:20]
+    if not items:
+        return await message.reply("Queue is empty.")
 
+    # Prepare text for queue
+    text_lines = [f"Queue for this chat (max 20):\n"]
+    for idx, item in enumerate(items, 1):
+        title = item.get("title", "Unknown")
+        duration = item.get("duration", "-")
+        text_lines.append(f"{idx}. {title} | {duration}")
+    text = "\n".join(text_lines)
+
+    # Create brown background image
+    width, height = 800, 600
+    img = Image.new("RGB", (width, height), (150, 75, 0))  # brown
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 32)
+    except:
+        font = ImageFont.load_default()
+    draw.multiline_text((40, 40), text, fill="white", font=font, spacing=8)
+
+    # Save to bytes
+    from io import BytesIO
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    await message.reply_photo(photo=buf, caption="Current Queue")
 
 
 from functools import wraps
