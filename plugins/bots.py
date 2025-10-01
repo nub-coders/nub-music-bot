@@ -1707,6 +1707,7 @@ async def play_handler_func(client, message):
             message.reply_to_message,
             "Media"
         )
+        stream_url = None
 
         # Generate thumbnail if missing
         if not thumbnail and media_type in ["video", "video_note"]:
