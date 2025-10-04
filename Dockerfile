@@ -1,4 +1,4 @@
-FROM python:3.13.2
+FROM python:latest
 
 # Install ffmpeg and git
 RUN apt-get update && \
