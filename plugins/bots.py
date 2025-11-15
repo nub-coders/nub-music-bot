@@ -2183,12 +2183,12 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 @Client.on_callback_query(filters.regex(r"^(skip|cskip)$"))
 @admin_only()
-async def button_end_handler(client: Client, callback_query: CallbackQuery):
+async def button_skip_handler(client: Client, callback_query: CallbackQuery):
     user_data = collection.find_one({"bot_id": client.me.id})
     busers = user_data.get('busers', [])
 
     if callback_query.from_user.id in busers:
-        await callback_query.answer("You do not have permission to end the session!", show_alert=True)
+        await callback_query.answer("You don't have permission to skip!", show_alert=True)
         return
 
     try:
@@ -2200,36 +2200,57 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             else callback_query.message.chat.id
         )
 
-        if chat_id in queues:
-         if len(queues[chat_id]) >0:
-            next = queues[chat_id].pop(0)
+        if chat_id in queues and len(queues[chat_id]) > 0:
+            # There's a next song in queue
+            next_song = queues[chat_id].pop(0)
             await callback_query.message.reply(f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {callback_query.from_user.mention()}")
+            
             try:
-                await call_py.pause(chat_id)
-            except:
-                pass
-            await join_call(next['message'],
- next['title'], next['yt_link'], next['chat'], next['by'], next['duration'], next['mode'], next['thumb'], next.get('stream_url')
-)
-         else:
-            await clients['call_py'].leave_call(chat_id)
-            await remove_active_chat(client, chat_id)
-            await callback_query.message.reply(f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}")
-            playing[chat_id].clear()
-            await callback_query.message.delete()
-        else:
-            await remove_active_chat(client, chat_id)
-            await call_py.leave_call(chat_id)
-            await callback_query.message.reply(
-                f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}"
+                await clients['call_py'].pause(chat_id)
+            except Exception as e:
+                logger.warning(f"Could not pause before skip: {e}")
+            
+            await join_call(
+                next_song['message'],
+                next_song['title'], 
+                next_song['yt_link'], 
+                next_song['chat'], 
+                next_song['by'], 
+                next_song['duration'], 
+                next_song['mode'], 
+                next_song['thumb'], 
+                next_song.get('stream_url')
             )
-            playing[chat_id].clear()
+            await callback_query.answer("⏭️ Skipped to next track", show_alert=False)
+        else:
+            # No more songs in queue
+            try:
+                await clients['call_py'].leave_call(chat_id)
+            except Exception as e:
+                logger.warning(f"Error leaving call: {e}")
+            
+            await remove_active_chat(client, chat_id)
+            
+            if chat_id in playing:
+                playing[chat_id].clear()
+            
+            await callback_query.message.reply(f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}")
+            
+            try:
+                await callback_query.message.delete()
+            except Exception as e:
+                logger.warning(f"Could not delete message: {e}")
+            
+            await callback_query.answer("⏭️ Queue empty, stream ended", show_alert=False)
+            
     except NotInCallError:
-        await callback_query.answer(
-            f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}",
-            show_alert=True,
-        )
-        playing[chat_id].clear()
+        await remove_active_chat(client, chat_id)
+        if chat_id in playing:
+            playing[chat_id].clear()
+        await callback_query.answer("✅ Stream ended (not in call)", show_alert=False)
+    except Exception as e:
+        logger.error(f"Error in skip button handler: {e}")
+        await callback_query.answer(f"❌ Error: {str(e)[:100]}", show_alert=True)
 
 @Client.on_message(filters.command("loop"))
 @admin_only()
