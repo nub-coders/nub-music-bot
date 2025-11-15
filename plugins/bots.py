@@ -411,15 +411,20 @@ async def seek_handler_func(client, message):
 
             # Seek to specified position
             to_seek = format_duration(total_seek)
-            stream_url = current_song['yt_link']
+            yt_link = current_song['yt_link']
+            
+            # Get stream URL (optimized - returns input if not YouTube)
+            stream_url = get_stream_url(yt_link)
+            if not stream_url:
+                stream_url = yt_link  # Fallback to original link
+            
             await call_py.play(
                 message.chat.id,
                 MediaStream(
                     stream_url,
-                    AudioQuality.HIGH,
+                    AudioQuality.STUDIO,
                     VideoQuality.HD_720p,
                     video_flags=audio_flags,
-                    ytdlp_parameters='--cookies-from-browser chrome',
                     ffmpeg_parameters=f"-ss {to_seek} -to {duration_str}"
                 ),
             )

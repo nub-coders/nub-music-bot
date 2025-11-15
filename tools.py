@@ -52,6 +52,85 @@ from pyrogram.errors import (
 import logging
 logger = logging.getLogger(__name__)
 
+
+def extract_best_format_url(formats):
+    """Extract the best available format URL"""
+    if not formats:
+        return None
+
+    # Priority: combined format (video+audio) > video+audio > video only
+    for f in formats:
+        if (f.get("acodec") != "none" and 
+            f.get("vcodec") != "none" and 
+            f.get("url")):
+            return f.get("url")
+
+    # Fallback to first available URL
+    for f in formats:
+        if f.get("url"):
+            return f.get("url")
+
+    return None
+
+
+def get_stream_url(youtube_url):
+    """Get direct stream URL from YouTube link. Returns input as-is if not a YouTube URL."""
+    
+    # Check if it's a YouTube URL
+    youtube_pattern = r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+'
+    if not re.match(youtube_pattern, youtube_url):
+        logger.info(f"Not a YouTube URL, returning as-is: {youtube_url[:50]}...")
+        return youtube_url
+    
+    ydl_opts = {
+        "format": "best[height<=720]",  # Limit quality for faster processing
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "cookiesfrombrowser": ("chrome",),
+        
+        # Performance optimizations
+        "extract_flat": False,
+        "writethumbnail": False,
+        "writeinfojson": False,
+        "writedescription": False,
+        "writesubtitles": False,
+        "writeautomaticsub": False,
+        
+        # Faster format selection
+        "format_sort": ["res:720", "fps", "br"],
+        "format_sort_force": True,
+        
+        # Network optimizations  
+        "http_chunk_size": 10485760,  # 10MB chunks
+        "retries": 1,
+        "fragment_retries": 1,
+        
+        # Skip unnecessary processing
+        "skip_playlist_after_errors": 1,
+    }
+
+    try:
+        import yt_dlp
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            logger.info(f"📥 Extracting stream URL from YouTube: {youtube_url}")
+            info = ydl.extract_info(youtube_url, download=False)
+            
+            # Get direct stream URL
+            stream_url = extract_best_format_url(info.get("formats", []))
+            
+            if stream_url:
+                logger.info(f"✅ Successfully extracted stream URL")
+            else:
+                logger.warning(f"⚠️ Could not extract stream URL")
+            
+            return stream_url
+            
+    except Exception as e:
+        logger.error(f"❌ Error extracting stream URL: {e}")
+        return None
+
+
 temporary = {}
 active = []
 playing = {}
@@ -957,7 +1036,19 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         position = len(queues.get(chat_id, [])) # Use get with default for safety
         
         # Determine the URL to use for streaming
-        stream_source = stream_url if stream_url else youtube_link
+        # If stream_url is provided, use it; otherwise extract from youtube_link
+        if stream_url:
+            stream_source = stream_url
+            logger.info(f"Using provided stream URL")
+        elif youtube_link:
+            logger.info(f"Extracting stream URL from YouTube link")
+            stream_source = get_stream_url(youtube_link)
+            if not stream_source:
+                logger.warning("Failed to extract stream URL, falling back to youtube_link")
+                stream_source = youtube_link
+        else:
+            stream_source = None
+            
         print(stream_source)
         if not stream_source:
             logger.error("No stream source provided (neither stream_url nor youtube_link)")
@@ -970,10 +1061,9 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             chat_id,
             MediaStream(
                 stream_source,
-                AudioQuality.HIGH,
+                AudioQuality.STUDIO,
                 VideoQuality.HD_720p,
                 video_flags=audio_flags,
-                ytdlp_parameters='--cookies-from-browser chrome',
             ),
         )
 
