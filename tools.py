@@ -1096,7 +1096,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             [
                 InlineKeyboardButton(text="▷", callback_data="resume"),
                 InlineKeyboardButton(text="II", callback_data="pause"),
-                InlineKeyboardButton(text="‣‣I" if position < 1 else f"‣‣I({position})", callback_data="skip"),
+                InlineKeyboardButton(text="‣‣I", callback_data="skip"),
                 InlineKeyboardButton(text="▢", callback_data="end"),
             ],
             [

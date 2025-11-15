@@ -1837,7 +1837,7 @@ async def play_handler_func(client, message):
             [
                 InlineKeyboardButton("▷", callback_data=f"{'c' if channel_mode else ''}resume"),
                 InlineKeyboardButton("II", callback_data=f"{'c' if channel_mode else ''}pause"),
-                InlineKeyboardButton("‣‣I({position})" if position <1 else f"‣‣I({position})", callback_data=f"{'c' if channel_mode else ''}skip"),
+                InlineKeyboardButton("‣‣I", callback_data=f"{'c' if channel_mode else ''}skip"),
                 InlineKeyboardButton("▢", callback_data=f"{'c' if channel_mode else ''}end"),
             ],
         [
@@ -2080,7 +2080,7 @@ async def status(client, message):
 async def button_end_handler(client: Client, callback_query: CallbackQuery):
     # Check if user is banned using global BLOCK variable
     if callback_query.from_user.id in BLOCK:
-        await callback_query.answer(f"{upper_mono('You do not have permission to end the session!')}", show_alert=True)
+        await callback_query.answer("You do not have permission to end the session!", show_alert=True)
         return
 
     try:
@@ -2097,26 +2097,47 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
         if is_active:
             # Clear the song queue and end the session
             await remove_active_chat(client, chat_id)
-            queues[chat_id].clear()
-            await call_py.leave_call(chat_id)
+            if chat_id in queues:
+                queues[chat_id].clear()
+            try:
+                await call_py.leave_call(chat_id)
+            except Exception as e:
+                logger.warning(f"Error leaving call: {e}")
+            
             await callback_query.message.reply(
                 f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}"
             )
-            await callback_query.message.delete()
-            playing[chat_id].clear()
+            try:
+                await callback_query.message.delete()
+            except Exception as e:
+                logger.warning(f"Could not delete message: {e}")
+            
+            if chat_id in playing:
+                playing[chat_id].clear()
+            
+            await callback_query.answer("✅ Stream ended successfully", show_alert=False)
         else:
             await remove_active_chat(client, chat_id)
-            await call_py.leave_call(chat_id)
+            try:
+                await call_py.leave_call(chat_id)
+            except Exception as e:
+                logger.warning(f"Error leaving call: {e}")
+            
             await callback_query.message.reply(
                 f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
             )
-            playing[chat_id].clear()
+            if chat_id in playing:
+                playing[chat_id].clear()
+            
+            await callback_query.answer("ℹ️ No active stream found", show_alert=False)
     except NotInCallError:
-        await callback_query.answer(
-            f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}",
-            show_alert=True,
-        )
-        playing[chat_id].clear()
+        await remove_active_chat(client, chat_id)
+        if chat_id in playing:
+            playing[chat_id].clear()
+        await callback_query.answer("✅ Stream ended (not in call)", show_alert=False)
+    except Exception as e:
+        logger.error(f"Error in end button handler: {e}")
+        await callback_query.answer(f"❌ Error: {str(e)[:100]}", show_alert=True)
 
 
 @Client.on_message(filters.command("end"))
@@ -2167,7 +2188,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
     busers = user_data.get('busers', [])
 
     if callback_query.from_user.id in busers:
-        await callback_query.answer(f"{upper_mono('You do not have permission to end the session!')}", show_alert=True)
+        await callback_query.answer("You do not have permission to end the session!", show_alert=True)
         return
 
     try:
@@ -2340,12 +2361,12 @@ async def button_resume_handler(client: Client, callback_query: CallbackQuery):
         if await is_active_chat(client, chat_id):
             await call_py.resume(chat_id)
             await callback_query.message.reply(
-                f"{upper_mono('Song resumed. Use the Pause button to pause again.')}\n\nʙʏ: {callback_query.from_user.mention()}"
+                f"Song resumed. Use the Pause button to pause again.\n\nʙʏ: {callback_query.from_user.mention()}"
             )
         else:
-            await callback_query.answer(f"{upper_mono('Assistant is not streaming anything!')}")
+            await callback_query.answer("Assistant is not streaming anything!")
     except NotInCallError:
-        await callback_query.answer(f"{upper_mono('Assistant is not streaming anything!')}", show_alert=True)
+        await callback_query.answer("Assistant is not streaming anything!", show_alert=True)
 
 
 @Client.on_callback_query(filters.regex("^(pause|cpause)$"))
@@ -2369,12 +2390,12 @@ async def button_pause_handler(client: Client, callback_query: CallbackQuery):
         if await is_active_chat(client, chat_id):
             await call_py.pause(chat_id)
             await callback_query.message.reply(
-                f"{upper_mono('Song paused. Use the Resume button to continue.')}\n\nʙʏ: {callback_query.from_user.mention()}"
+                f"Song paused. Use the Resume button to continue.\n\nʙʏ: {callback_query.from_user.mention()}"
             )
         else:
-            await callback_query.answer(f"{upper_mono('Assistant is not streaming anything!')}")
+            await callback_query.answer("Assistant is not streaming anything!")
     except NotInCallError:
-        await callback_query.answer(f"{upper_mono('Assistant is not streaming anything!')}", show_alert=True)
+        await callback_query.answer("Assistant is not streaming anything!", show_alert=True)
 
 @Client.on_message(filters.command("resume"))
 @admin_only()
