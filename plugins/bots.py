@@ -36,6 +36,7 @@ from pytgcalls.exceptions import NotInCallError, NoActiveGroupCall
 from pytgcalls.types import AudioQuality, MediaStream, VideoQuality
 
 from config import *
+from database import find_one, push_to_array, set_fields
 from fonts import *
 from tools import *
 from youtube import handle_youtube, extract_video_id, format_duration
