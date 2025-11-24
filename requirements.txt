@@ -1,6 +1,9 @@
 psutil
 imageio
 mutagen
+pymongo
+motor
+requests
 setuptools
 google-api-python-client
 google-auth-httplib2
