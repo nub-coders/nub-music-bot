@@ -74,7 +74,7 @@ def extract_best_format_url(formats):
 
 
 def get_stream_url(youtube_url):
-    """Get direct stream URL from YouTube link. Returns input as-is if not a YouTube URL."""
+    """Get direct stream URL from YouTube link using optimized yt-dlp extraction. Returns input as-is if not a YouTube URL."""
     
     # Check if it's a YouTube URL
     youtube_pattern = r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+'
@@ -83,29 +83,24 @@ def get_stream_url(youtube_url):
         return youtube_url
     
     ydl_opts = {
-        "format": "best[height<=720]",  # Limit quality for faster processing
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "cookiesfrombrowser": ("chrome",),
-        
+
         # Performance optimizations
-        "extract_flat": False,
+        "extract_flat": False,  # We need full info
         "writethumbnail": False,
         "writeinfojson": False,
         "writedescription": False,
         "writesubtitles": False,
         "writeautomaticsub": False,
-        
-        # Faster format selection
-        "format_sort": ["res:720", "fps", "br"],
-        "format_sort_force": True,
-        
+
         # Network optimizations  
         "http_chunk_size": 10485760,  # 10MB chunks
-        "retries": 1,
+        "retries": 1,  # Reduce retries for speed
         "fragment_retries": 1,
-        
+
         # Skip unnecessary processing
         "skip_playlist_after_errors": 1,
     }
@@ -116,7 +111,7 @@ def get_stream_url(youtube_url):
             logger.info(f"📥 Extracting stream URL from YouTube: {youtube_url}")
             info = ydl.extract_info(youtube_url, download=False)
             
-            # Get direct stream URL
+            # Get direct stream URL using optimized extraction
             stream_url = extract_best_format_url(info.get("formats", []))
             
             if stream_url:

@@ -56,7 +56,7 @@ mutagen
 opencv-python-headless
 Pillow
 psutil
-py-tgcalls==2.2.6
+py-tgcalls
 pymediainfo
 pymongo
 pyrotgfork
