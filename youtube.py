@@ -313,7 +313,7 @@ def get_video_details(video_id):
             'quiet': True,
             'no_warnings': True,
             'extract_flat': True,
-            "cookiesfrombrowser": ("chrome",),
+            "cookiesfrombrowser": ("firefox",),
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -375,7 +375,7 @@ async def handle_youtube_ytdlp(argument):
             'no_warnings': True,
             'extract_flat': True, # Get basic info without downloading
             'skip_download': True,
-            "cookiesfrombrowser": ("chrome",), # Optional: Use cookies from browser
+            "cookiesfrombrowser": ("firefox",), # Optional: Use cookies from browser
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             if is_url:

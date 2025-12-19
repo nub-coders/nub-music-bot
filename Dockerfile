@@ -1,9 +1,13 @@
 FROM python:3.13
 
-# Install ffmpeg and git
+# Install ffmpeg, git, and curl
 RUN apt-get update && \
-    apt-get install -y ffmpeg git && \
+    apt-get install -y ffmpeg git curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Deno runtime
+RUN curl -fsSL https://deno.land/install.sh | sh && \
+    mv /root/.deno/bin/deno /usr/local/bin/deno
 
 # Configure git with rebase true
 RUN git config --global pull.rebase true
