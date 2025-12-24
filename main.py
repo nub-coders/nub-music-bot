@@ -48,6 +48,11 @@ async def main():
             plugins=dict(root="plugins"),
             in_memory=True,
             sleep_threshold=32,
+            device_model="Desktop",
+            system_version="Windows 10",
+            app_version="3.4.3 x64",
+            lang_code="en",
+            lang_pack="tdesktop"
         )
         
         # Initialize and store session client
@@ -57,7 +62,12 @@ async def main():
             session_string=STRING_SESSION,
             in_memory=True,
             #no_updates=True,
-            sleep_threshold=32
+            sleep_threshold=32,
+            device_model="Desktop",
+            system_version="Windows 10",
+            app_version="3.4.3 x64",
+            lang_code="en",
+            lang_pack="tdesktop"
         )
         
         call_py = PyTgCalls(session)

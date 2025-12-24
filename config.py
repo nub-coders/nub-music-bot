@@ -10,8 +10,8 @@ from thumbnails import *
 from fonts import *
 
 # Use getenv for all sensitive/configurable values
-API_ID = os.getenv("API_ID","")
-API_HASH = os.getenv("API_HASH", "")
+API_ID = os.getenv("API_ID","2040")
+API_HASH = os.getenv("API_HASH", "b18441a1ff607e10a989891a5462e627")
 STRING_SESSION = os.getenv("STRING_SESSION", "")
 GROUP = os.getenv("GROUP", "nub_coder_s")
 CHANNEL = os.getenv("CHANNEL", "nub_coders")
