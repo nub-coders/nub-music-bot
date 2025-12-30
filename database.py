@@ -4,7 +4,7 @@ Async MongoDB database handler for nub-music-bot
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_URI = os.getenv("MONGODB_URI", "mongodb+srv://nubcoders:nubcoders@music.8rxlsum.mongodb.net/?retryWrites=true&w=majority&appName=music")
 DB_NAME = os.getenv("DB_NAME", "musicbot")
 
 client = AsyncIOMotorClient(MONGO_URI)
