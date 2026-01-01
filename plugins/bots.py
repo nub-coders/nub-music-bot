@@ -1414,7 +1414,7 @@ async def blocklist_handler(client, message):
 
 
     # Fetch blocklist from the database
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     if not user_data:
         return await message.reply("No blocklist found.")
 
@@ -1613,7 +1613,7 @@ async def play_handler_func(client, message):
     # Get the bot username and retrieve the session client ID from connector
     youtube_link = None
     input_text = message.text.split(" ", 1)
-    d_ata = collection.find_one({"bot_id": client.me.id})
+    d_ata = await find_one(collection, {"bot_id": client.me.id})
 
     act_calls = len(active)
 
@@ -2000,7 +2000,7 @@ async def status(client, message):
     Man = await message.reply_text("Collecting stats...")
     start = datetime.datetime.now()
     u = g = sg = c = a_chat = play_count = 0
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
 
     if user_data:
         # Clean old song entries and get count
@@ -2009,7 +2009,7 @@ async def status(client, message):
             {"bot_id": client.me.id},
             {"$pull": {"dates": {"$lt": time_threshold}}}
         )
-        updated_data = collection.find_one({"bot_id": client.me.id})
+        updated_data = await find_one(collection, {"bot_id": client.me.id})
         play_count = len(updated_data.get('dates', [])) if updated_data else 0
 
         users = user_data.get('users', [])
@@ -2148,7 +2148,7 @@ async def end_handler_func(client, message):
          await message.delete()
   except:
          pass
-  user_data = collection.find_one({"bot_id": client.me.id})
+  user_data = await find_one(collection, {"bot_id": client.me.id})
   busers = user_data.get('busers', [])
   if message.from_user.id in busers:
        return
@@ -2185,7 +2185,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 @Client.on_callback_query(filters.regex(r"^(skip|cskip)$"))
 @admin_only()
 async def button_skip_handler(client: Client, callback_query: CallbackQuery):
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     busers = user_data.get('busers', [])
 
     if callback_query.from_user.id in busers:
@@ -2262,7 +2262,7 @@ async def loop_handler_func(client, message):
         pass
 
     # Check if user is banned
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     busers = user_data.get('busers', [])
     if message.from_user.id in busers:
         return
@@ -2327,7 +2327,7 @@ async def skip_handler_func(client, message):
          await message.delete()
   except:
          pass
-  user_data = collection.find_one({"bot_id": client.me.id})
+  user_data = await find_one(collection, {"bot_id": client.me.id})
   busers = user_data.get('busers', [])
   if message.from_user.id in busers:
        return
@@ -2364,7 +2364,7 @@ async def skip_handler_func(client, message):
 @Client.on_callback_query(filters.regex("^(resume|cresume)$"))
 @admin_only()
 async def button_resume_handler(client: Client, callback_query: CallbackQuery):
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     busers = user_data.get('busers', [])
 
     if callback_query.from_user.id in busers:
@@ -2394,7 +2394,7 @@ async def button_resume_handler(client: Client, callback_query: CallbackQuery):
 @Client.on_callback_query(filters.regex("^(pause|cpause)$"))
 @admin_only()
 async def button_pause_handler(client: Client, callback_query: CallbackQuery):
-    user_data = collection.find_one({"bot_id": client.me.id})
+    user_data = await find_one(collection, {"bot_id": client.me.id})
     busers = user_data.get('busers', [])
 
     if callback_query.from_user.id in busers:
@@ -2422,7 +2422,7 @@ async def button_pause_handler(client: Client, callback_query: CallbackQuery):
 @Client.on_message(filters.command("resume"))
 @admin_only()
 async def resume_handler_func(client, message):
-  user_data = collection.find_one({"bot_id": client.me.id})
+  user_data = await find_one(collection, {"bot_id": client.me.id})
   busers = user_data.get('busers', [])
   if message.from_user.id in busers:
        return
@@ -2439,7 +2439,7 @@ async def resume_handler_func(client, message):
 @Client.on_message(filters.command("pause"))
 @admin_only()
 async def pause_handler_func(client, message):
-  user_data = collection.find_one({"bot_id": client.me.id})
+  user_data = await find_one(collection, {"bot_id": client.me.id})
   busers = user_data.get('busers', [])
   if message.from_user.id in busers:
        return
@@ -2473,7 +2473,7 @@ async def broadcast_callback_handler(client, callback_query):
     pin = user_data.get('pin')
     await callback_query.message.delete()
     # Fetch bot data
-    bot_data = collection.find_one({"bot_id": client.me.id})
+    bot_data = await find_one(collection, {"bot_id": client.me.id})
     message_to_broadcast, forwarding = broadcast_message.get(client.me.id)
     if bot_data and bot:
         X = await callback_query.message.reply("Starting broadcast from bot")
@@ -2601,7 +2601,7 @@ async def get_status(client):
 
   start = datetime.datetime.now()
   u = g = sg = a_chat =  0 # Initialize counters
-  user_data = collection.find_one({"bot_id": client.me.id})
+  user_data = await find_one(collection, {"bot_id": client.me.id})
   mess=""
 
   if user_data:
