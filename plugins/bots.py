@@ -40,7 +40,7 @@ from fonts import *
 from tools import *
 from youtube import handle_youtube, extract_video_id, format_duration
 from tools import trim_title
-from database import find_one, push_to_array, set_fields, collection
+from database import find_one, push_to_array, pull_from_array, set_fields, collection, user_sessions
 
 async def end(client, update):
     """Handle stream end event"""
