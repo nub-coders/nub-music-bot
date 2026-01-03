@@ -43,6 +43,7 @@ from pyrogram import Client, filters
 import gc
 import time
 from youtube import handle_youtube, get_video_details, extract_video_id, format_number, format_duration, time_to_seconds
+from database import user_sessions
 
 from pyrogram.errors import (
     FloodWait,

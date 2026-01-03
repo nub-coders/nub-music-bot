@@ -13,6 +13,7 @@ from pyrogram.errors.exceptions import SessionRevoked, UserDeactivatedBan, AuthK
 from tools import *
 from config import *
 from youtube import check_and_update_ytdlp
+from database import user_sessions as async_user_sessions, collection as async_collection
 
 # Initialize clients dictionary
 # Configure logging
@@ -85,8 +86,8 @@ async def main():
         # Initialize global variables from database
         await call_py.start()
         await bot.start() 
-        user_data = await user_sessions.find_one({"bot_id": bot.me.id})
-        bot_data = await collection.find_one({"bot_id": bot.me.id})
+        user_data = await async_user_sessions.find_one({"bot_id": bot.me.id})
+        bot_data = await async_collection.find_one({"bot_id": bot.me.id})
         
         # Update global variables
         SUDO.clear()
@@ -99,7 +100,7 @@ async def main():
         BLOCK.extend(bot_data.get('busers', []) if bot_data else [])
         client_name = f"{bot.me.first_name} {bot.me.last_name or ''}".strip()
         logger.info(f"Bot authorized successfully! 🎉 Authorized as: {client_name}")
-        await user_sessions.update_one(
+        await async_user_sessions.update_one(
     {"bot_id": bot.me.id},                 # search filter
     {"$setOnInsert": {"bot_id": bot.me.id}},  # insert this only if not found
     upsert=True
