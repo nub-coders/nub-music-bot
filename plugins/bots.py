@@ -515,7 +515,7 @@ async def auth_user(client, message):
                 if replied_user_id not in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].append(replied_user_id)
                     # Update database to maintain persistence
-                    user_sessions.update_one(
+                    await user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
@@ -537,7 +537,7 @@ async def auth_user(client, message):
                 if user_id_to_auth not in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].append(user_id_to_auth)
                     # Update database to maintain persistence
-                    user_sessions.update_one(
+                    await user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
@@ -576,7 +576,7 @@ async def unauth_user(client, message):
             if replied_user_id in AUTH[str(chat_id)]:
                 AUTH[str(chat_id)].remove(replied_user_id)
                 # Update database to maintain persistence
-                user_sessions.update_one(
+                await user_sessions.update_one(
                     {"bot_id": client.me.id},
                     {"$set": {'auth_users': AUTH}},
                     upsert=True
@@ -596,7 +596,7 @@ async def unauth_user(client, message):
                 if user_id_to_unauth in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].remove(user_id_to_unauth)
                     # Update database to maintain persistence
-                    user_sessions.update_one(
+                    await user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
@@ -1164,7 +1164,7 @@ async def user_client_start_handler(client, message):
        elif os.path.exists(logo_path_jpg):
            logo = logo_path_jpg
        else:
-           logo = gvarstatus(client.me.id, "LOGO") or (await client.download_media(client.me.photo.big_file_id, logo_path_jpg) if client.me.photo else "music.jpg")
+           logo = await gvarstatus(client.me.id, "LOGO") or (await client.download_media(client.me.photo.big_file_id, logo_path_jpg) if client.me.photo else "music.jpg")
 
        alive_logo = logo
        if type(logo) is bytes:
@@ -1177,7 +1177,7 @@ async def user_client_start_handler(client, message):
 
 
 
-       greet_message = gvarstatus(client.me.id, "WELCOME") or """
+       greet_message = await gvarstatus(client.me.id, "WELCOME") or """
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
@@ -1356,7 +1356,7 @@ async def commands_handler(client, callback_query):
     elif data == "back":
             name = callback_query.from_user.mention()
             botname = client.me.mention()
-            greet_message = gvarstatus(client.me.id, "WELCOME") or """
+            greet_message = await gvarstatus(client.me.id, "WELCOME") or """
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
@@ -1910,23 +1910,23 @@ stream_url = None):
            queues[chat.id] = []
         queues[chat.id].append(put)
 
-def set_gvar(user_id, key, value):
-    set_user_data(user_id, key, value)
+async def set_gvar(user_id, key, value):
+    await set_user_data(user_id, key, value)
 
-def get_user_data(user_id, key):
-    user_data = user_sessions.find_one({"bot_id": user_id})
+async def get_user_data(user_id, key):
+    user_data = await user_sessions.find_one({"bot_id": user_id})
     if user_data and key in user_data:
         return user_data[key]
     return None
 
-def set_user_data(user_id, key, value):
-    user_sessions.update_one({"bot_id": user_id}, {"$set": {key: value}}, upsert=True)
+async def set_user_data(user_id, key, value):
+    await user_sessions.update_one({"bot_id": user_id}, {"$set": {key: value}}, upsert=True)
 
-def gvarstatus(user_id, key):
-    return get_user_data(user_id, key)
+async def gvarstatus(user_id, key):
+    return await get_user_data(user_id, key)
 
-def unset_user_data(user_id, key):
-     user_sessions.update_one({"bot_id": user_id}, {"$unset": {key: ''}}, upsert=True)
+async def unset_user_data(user_id, key):
+     await user_sessions.update_one({"bot_id": user_id}, {"$unset": {key: ''}}, upsert=True)
 
 
 def rename_file(old_name, new_name):
@@ -2461,7 +2461,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 @Client.on_callback_query(filters.regex("broadcast"))
 async def broadcast_callback_handler(client, callback_query):
     # Fetch user data for the callback query
-    user_data = user_sessions.find_one({"bot_id": client.me.id})
+    user_data = await user_sessions.find_one({"bot_id": client.me.id})
     if not user_data:
         return await callback_query.answer("User data not found. Please log in first.", show_alert=True)
     group = user_data.get('group')
@@ -2706,13 +2706,13 @@ async def compare_message(mess, client, session):
 async def toggle_setting(client, callback_query):
     sender_id = client.me.id
 
-    user_data = user_sessions.find_one({"bot_id": sender_id})
+    user_data = await user_sessions.find_one({"bot_id": sender_id})
     if not user_data:
         return await callback_query.answer("User data not found. Please log in first.", show_alert=True)
     setting_to_toggle = callback_query.data.split("_", 1)[1]
     current_value = user_data.get(setting_to_toggle)
     new_value = not current_value
-    user_sessions.update_one(
+    await user_sessions.update_one(
         {"bot_id": sender_id},
         {"$set": {setting_to_toggle: new_value}}
     )
@@ -2772,7 +2772,7 @@ async def broadcast_command_handler(client, message):
         return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
     sender_id = client.me.id
-    user_data = user_sessions.find_one({"bot_id": sender_id})
+    user_data = await user_sessions.find_one({"bot_id": sender_id})
     if not user_data:
         return await message.reply("User data not found. Please log in first.")
     if not isinstance(message, CallbackQuery):
@@ -3668,7 +3668,7 @@ async def set_welcome_handler(client, message):
                 logo = logo_path_jpg
             else:
                 # Fallback to old methods
-                logo = gvarstatus(sender_id, "LOGO")
+                logo = await gvarstatus(sender_id, "LOGO")
                 if not logo and client.me.photo:
                     photos = await client.get_profile_photos("me")
                     if photos:
@@ -3684,7 +3684,7 @@ async def set_welcome_handler(client, message):
                 if 'video' in mime.from_file(alive_logo):
                     alive_logo = rename_file(alive_logo, logo_path_mp4)
 
-            welcome_text = gvarstatus(sender_id, "WELCOME") or f"""
+            welcome_text = await gvarstatus(sender_id, "WELCOME") or f"""
 🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
 
 🎶 Your **musical journey** begins with {botname}!
@@ -3708,7 +3708,7 @@ async def set_welcome_handler(client, message):
 
         except Exception as e:
             logger.info(f"Error showing preview: {str(e)}")
-            welcome_text = gvarstatus(sender_id, "WELCOME")
+            welcome_text = await gvarstatus(sender_id, "WELCOME")
             if welcome_text:
                 await client.send_message(
                     message.chat.id,

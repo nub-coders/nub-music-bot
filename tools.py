@@ -1153,8 +1153,8 @@ async def is_active_chat(chat_id):
         return True
 
 
-def get_user_data(user_id, key):
-    user_data = user_sessions.find_one({"user_id": user_id})
+async def get_user_data(user_id, key):
+    user_data = await user_sessions.find_one({"user_id": user_id})
     if user_data and key in user_data:
         return user_data[key]
     return None
