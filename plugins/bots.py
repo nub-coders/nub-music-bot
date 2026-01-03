@@ -1391,8 +1391,8 @@ async def commands_handler(client, callback_query):
 async def blocklist_handler(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", [])
+    users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+    sudoers = users_data.get("SUDOERS", []) if users_data else []
 
     is_admin = False
     if os.path.exists(admin_file):
@@ -2725,8 +2725,8 @@ async def status_command_handler(client, message):
     admin_file = f"{ggg}/admin.txt"
 
     # Get user data and permissions
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", [])
+    users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+    sudoers = users_data.get("SUDOERS", []) if users_data else []
 
     is_admin = False
     if os.path.exists(admin_file):
@@ -2752,8 +2752,8 @@ async def status_command_handler(client, message):
 async def broadcast_command_handler(client, message):
     user_id = message.from_user.id
     admin_file = f"{ggg}/admin.txt"
-    users_data = user_sessions.find_one({"bot_id": client.me.id})
-    sudoers = users_data.get("SUDOERS", [])
+    users_data = await find_one(user_sessions, {"bot_id": client.me.id})
+    sudoers = users_data.get("SUDOERS", []) if users_data else []
 
     is_admin = False
     if os.path.exists(admin_file):
