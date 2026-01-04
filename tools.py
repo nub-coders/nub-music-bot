@@ -1112,7 +1112,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         # Link the title if it's a YouTube link and not a local file
         display_title = f"[{title_formatted}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if youtube_link and not os.path.exists(youtube_link) else title_formatted
         
-        style_index = int(gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
+        style_index = int(await gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
         
         message_text = play_styles.get(style_index, play_styles[11]).format(
             mode_formatted,
@@ -1160,8 +1160,8 @@ async def get_user_data(user_id, key):
         return user_data[key]
     return None
 
-def gvarstatus(user_id, key):
-    return get_user_data(user_id, key)
+async def gvarstatus(user_id, key):
+    return await get_user_data(user_id, key)
 
 
 
