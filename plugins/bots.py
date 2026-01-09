@@ -1285,7 +1285,6 @@ async def commands_handler(client, callback_query):
 <blockquote>
 ◾ /kang       – clone sticker/photo to your pack
 ◾ /mmf <text> – write text on image/sticker
-◾ /qt <text>  – create fake quote sticker
 </blockquote>"""
 
     status_commands = """**📊 STATUS & INFO COMMANDS**
