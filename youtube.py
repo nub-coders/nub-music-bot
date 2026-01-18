@@ -265,6 +265,36 @@ async def check_and_update_ytdlp():
     except Exception as e:
         logger.error(f"Error in yt-dlp version check: {e}")
 
+def extract_best_format(formats):
+    """Pick the best format (progressive MP4 preferred) and return URL"""
+    if not formats:
+        return 'N/A'
+
+    def has_av_and_http(f):
+        return (
+            f.get("acodec") != "none"
+            and f.get("vcodec") != "none"
+            and str(f.get("protocol", "")).startswith("http")
+            and f.get("url")
+        )
+
+    # Prefer progressive MP4 (most universally playable)
+    for f in formats:
+        if has_av_and_http(f) and f.get("ext") == "mp4":
+            return f.get("url", 'N/A')
+
+    # Next: any HTTP progressive (audio+video)
+    for f in formats:
+        if has_av_and_http(f):
+            return f.get("url", 'N/A')
+
+    # Fallback: first available URL
+    for f in formats:
+        if f.get("url"):
+            return f.get("url", 'N/A')
+
+    return 'N/A'
+
 def get_video_details(video_id):
     """
     Get video details using API first, then yt_dlp fallback
@@ -310,10 +340,27 @@ def get_video_details(video_id):
     # Fallback to yt-dlp
     try:
         ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True,
+            # Only gather metadata, no downloads
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
             "cookiesfrombrowser": ("firefox",),
+
+            # Performance optimizations
+            "extract_flat": False,  # We need full info
+            "writethumbnail": False,
+            "writeinfojson": False,
+            "writedescription": False,
+            "writesubtitles": False,
+            "writeautomaticsub": False,
+
+            # Network optimizations  
+            "http_chunk_size": 10485760,  # 10MB chunks
+            "retries": 1,  # Reduce retries for speed
+            "fragment_retries": 1,
+
+            # Skip unnecessary processing
+            "skip_playlist_after_errors": 1,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -343,6 +390,9 @@ def get_video_details(video_id):
             if video_info.get('thumbnails'):
                 thumbnail = video_info['thumbnails'][-1].get('url', 'N/A')
 
+            # Extract best format stream URL
+            stream_url = extract_best_format(video_info.get('formats', []))
+
             # Prepare details dictionary
             details = {
                 'title': video_info.get('title', 'N/A'),
@@ -351,7 +401,9 @@ def get_video_details(video_id):
                 'view_count': video_info.get('view_count', 'N/A'),
                 'channel_name': video_info.get('uploader', 'N/A'),
                 'video_url': youtube_url,
-                'platform': 'YouTube'
+                'platform': 'YouTube',
+                'stream_url': stream_url,
+                'video_id': video_info.get('id', video_id)
             }
 
             return details
@@ -366,16 +418,32 @@ async def handle_youtube_ytdlp(argument):
     Helper function to get YouTube video info using yt-dlp.
 
     Returns:
-        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id)
+        tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
     """
     try:
         is_url = re.match(r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+", argument)
         ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True, # Get basic info without downloading
-            'skip_download': True,
-            "cookiesfrombrowser": ("firefox",), # Optional: Use cookies from browser
+            # Only gather metadata, no downloads
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "cookiesfrombrowser": ("firefox",),
+
+            # Performance optimizations
+            "extract_flat": False,
+            "writethumbnail": False,
+            "writeinfojson": False,
+            "writedescription": False,
+            "writesubtitles": False,
+            "writeautomaticsub": False,
+
+            # Network optimizations  
+            "http_chunk_size": 10485760,  # 10MB chunks
+            "retries": 1,  # Reduce retries for speed
+            "fragment_retries": 1,
+
+            # Skip unnecessary processing
+            "skip_playlist_after_errors": 1,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             if is_url:
@@ -408,8 +476,16 @@ async def handle_youtube_ytdlp(argument):
             if 'thumbnails' in info_dict and info_dict['thumbnails']:
                  thumbnail_url = info_dict['thumbnails'][-1]['url']
 
+            # Extract stream URL from formats
+            stream_url = 'N/A'
+            if 'formats' in info_dict and info_dict['formats']:
+                # Get the best format with audio and video, or best available
+                for fmt in reversed(info_dict['formats']):
+                    if fmt.get('url'):
+                        stream_url = fmt.get('url', 'N/A')
+                        break
 
-            return (title, duration_formatted, youtube_link, thumbnail_url, channel_name, views, video_id)
+            return (title, duration_formatted, youtube_link, thumbnail_url, channel_name, views, video_id, stream_url)
 
     except Exception as e:
         logger.error(f"Error in handle_youtube_ytdlp: {e}")
@@ -418,41 +494,27 @@ async def handle_youtube_ytdlp(argument):
 async def handle_youtube(argument):
     """
     Main function to get YouTube video information.
-    Prioritizes API calls, falls back to yt-dlp.
+    Prioritizes API calls, falls back to yt-dlp via get_video_details.
 
     Returns:
         tuple: (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
     """
     
-    # First try API if token is available
-    if API_TOKEN:
-        try:
-            logger.info("Attempting API request for video info...")
-            api_result = get_video_info(argument)
-
-            if api_result and api_result[0] and api_result[0] != "N/A":
-                title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
-
-                # Format duration if it's in seconds
-                if isinstance(duration, int):
-                    duration = format_duration(duration)
-
-                logger.info(f"API request successful, took {time_taken}")
-                return (title, duration, youtube_link, thumbnail, channel_name, views, video_id, stream_url)
-            else:
-                logger.warning("API returned invalid data, falling back to yt-dlp")
-        except Exception as e:
-            logger.error(f"API request failed: {e}, falling back to yt-dlp")
-    else:
-        logger.info("No API token found, using yt-dlp")
-
-    # Fallback to yt-dlp
-    result = await handle_youtube_ytdlp(argument)
-
-    # If yt-dlp fails, return error values
-    if not result:
-        logger.error("Both API and yt-dlp failed")
+    # Use get_video_details which handles API → yt-dlp fallback
+    details = get_video_details(argument)
+    
+    if 'error' in details:
+        logger.error(f"Failed to get video details: {details.get('error')}")
         return ("Error", "00:00", None, None, None, None, None, None)
-
-    # Add None for stream_url since yt-dlp doesn't provide it
-    return result + (None,)
+    
+    # Convert dict result to tuple format
+    return (
+        details.get('title', 'N/A'),
+        details.get('duration', 'N/A'),
+        details.get('video_url', 'N/A'),
+        details.get('thumbnail', 'N/A'),
+        details.get('channel_name', 'N/A'),
+        details.get('view_count', 'N/A'),
+        details.get('video_id', 'N/A'),
+        details.get('stream_url', 'N/A')
+    )
