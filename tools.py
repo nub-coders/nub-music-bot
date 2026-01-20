@@ -1025,6 +1025,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
     """Join voice call and start streaming"""
     # Trim the title to ensure it meets the length requirements
     title = trim_title(title)
+    print(f"[THUMB] {thumb}")
     logger.info(f"[join_call] Starting join_call for chat {chat.id} (Title: {title}, Mode: {mode})")
     logger.debug(f"[join_call] Parameters - youtube_link: {youtube_link}, stream_url: {stream_url}, duration: {duration}")
     logger.debug(f"[join_call] Thumbnail: {thumb if thumb else 'None'} (type: {type(thumb).__name__})")
