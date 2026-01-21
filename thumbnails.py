@@ -111,6 +111,12 @@ async def get_thumb(title, duration, thumbnail, channel=None, views=None, videoi
         import uuid
         random_id = str(uuid.uuid4())[:8]
         temp_files_to_delete = []
+        
+        # Sanitize videoid to remove invalid path characters
+        if videoid:
+            videoid = str(videoid).replace('/', '_').replace('\\', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_').replace('<', '_').replace('>', '_').replace('|', '_')
+        else:
+            videoid = "unknown"
 
         # Handle case when thumbnail is None or doesn't exist
         if thumbnail is None:
