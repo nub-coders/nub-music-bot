@@ -368,7 +368,8 @@ def get_video_details(video_id):
                     'channel_name': channel_name,
                     'video_url': youtube_link,
                     'platform': 'YouTube',
-                    'stream_url': stream_url
+                    'stream_url': stream_url,
+                    'video_id': video_id_result
                 }
             else:
                 logger.warning("API returned invalid data, falling back to yt-dlp")
