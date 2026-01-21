@@ -1146,7 +1146,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
 
         logger.debug(f"[join_call] Sending playback notification with thumbnail to chat {message.chat.id}")
         sent_message = await clients["bot"].send_photo(
-            message.chat.id, thumb, message_text, reply_markup=keyboard
+            chat_id, thumb, message_text, reply_markup=keyboard
         )
         logger.info(f"[join_call] Playback notification sent successfully, message_id: {sent_message.id}")
 
