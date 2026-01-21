@@ -226,4 +226,7 @@ async def get_thumb(title, duration, thumbnail, channel=None, views=None, videoi
 
     except Exception as e:
         print(f"Error generating thumbnail for video {videoid}: {e}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error generating thumbnail for video {videoid}: {type(e).__name__} - {e}", exc_info=True)
         return None
