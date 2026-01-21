@@ -83,7 +83,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         if not stream_source:
             logger.error(f"[join_call] No stream source provided (neither stream_url nor youtube_link) for chat {chat_id}")
             await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
-            return await remove_active_chat(chat_id)
+            return await remove_active_chat(clients["bot"], chat_id)
 
         logger.info(f"[join_call] Attempting to play: {title} from {stream_source[:100]}... in chat {chat_id}")
         logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p")
@@ -165,11 +165,26 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             by.mention() if hasattr(by, 'mention') else by # Ensure 'by' has a mention method
         )
 
-        logger.debug(f"[join_call] Sending playback notification with thumbnail to chat {message.chat.id}")
-        sent_message = await clients["bot"].send_photo(
-            chat_id, thumb, message_text, reply_markup=keyboard
-        )
-        logger.info(f"[join_call] Playback notification sent successfully, message_id: {sent_message.id}")
+        logger.debug(f"[join_call] Sending playback notification to chat {message.chat.id}")
+        # Check if thumbnail is valid before sending
+        if thumb:
+            try:
+                sent_message = await clients["bot"].send_photo(
+                    chat_id, thumb, message_text, reply_markup=keyboard
+                )
+                logger.info(f"[join_call] Playback notification sent with photo, message_id: {sent_message.id}")
+            except Exception as photo_err:
+                logger.warning(f"[join_call] Failed to send photo, sending as text instead: {photo_err}")
+                sent_message = await clients["bot"].send_message(
+                    chat_id, message_text, reply_markup=keyboard
+                )
+                logger.info(f"[join_call] Playback notification sent as text, message_id: {sent_message.id}")
+        else:
+            logger.warning(f"[join_call] Thumbnail is None, sending as text message")
+            sent_message = await clients["bot"].send_message(
+                chat_id, message_text, reply_markup=keyboard
+            )
+            logger.info(f"[join_call] Playback notification sent as text (no thumbnail), message_id: {sent_message.id}")
 
         logger.debug(f"[join_call] Creating progress update task for duration: {duration}")
         asyncio.create_task(update_progress_button(sent_message, duration, chat))
@@ -186,11 +201,11 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
     except NoActiveGroupCall:
         logger.error(f"[join_call] NoActiveGroupCall exception for chat {chat.id} - No active group calls")
         await clients["bot"].send_message(chat.id, "ERROR: No active group calls")
-        return await remove_active_chat(chat.id)
+        return await remove_active_chat(clients["bot"], chat.id)
     except Exception as e:
         logger.error(f"[join_call] Unexpected error in chat {chat.id}: {type(e).__name__} - {e}", exc_info=True)
         await clients["bot"].send_message(chat.id, f"ERROR: {e}")
-        return await remove_active_chat(chat.id)
+        return await remove_active_chat(clients["bot"], chat.id)
 
 async def end(client, update):
     """Handle stream end event"""
