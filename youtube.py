@@ -3,6 +3,7 @@ import requests
 import subprocess
 import sys
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 import re
 import json
@@ -13,6 +14,45 @@ from yt_dlp import YoutubeDL
 import yt_dlp
 
 logger = logging.getLogger(__name__)
+
+LOG_LEVEL = os.getenv("NUB_LOG_LEVEL", "INFO").upper()
+LOG_DIR = os.getenv("NUB_LOG_DIR", "logs")
+LOG_FILE = os.path.join(LOG_DIR, "youtube.log")
+
+
+def configure_logger():
+    """Configure a detailed, module-scoped logger with console and rotating file output."""
+    if getattr(configure_logger, "_configured", False):
+        return logger
+
+    level = logging._nameToLevel.get(LOG_LEVEL, logging.INFO)
+    formatter = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s | youtube | %(funcName)s:%(lineno)d | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        file_handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=3)
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except OSError as e:
+        logger.warning(f"Could not set up file logging: {e}")
+
+    logger.setLevel(level)
+    logger.propagate = False
+    configure_logger._configured = True
+    logger.debug("Detailed logger configured")
+    return logger
+
+
+configure_logger()
 
 # API Configuration
 API_TOKEN = os.getenv('NUB_YTDLP_API')  # from environment variable
@@ -508,7 +548,7 @@ async def handle_youtube(argument):
         return ("Error", "00:00", None, None, None, None, None, None)
     
     # Convert dict result to tuple format
-    return (
+    result_tuple = (
         details.get('title', 'N/A'),
         details.get('duration', 'N/A'),
         details.get('video_url', 'N/A'),
@@ -518,3 +558,12 @@ async def handle_youtube(argument):
         details.get('video_id', 'N/A'),
         details.get('stream_url', 'N/A')
     )
+
+    logger.info(
+        "handle_youtube returning: "
+        f"title={result_tuple[0]!r}, duration={result_tuple[1]!r}, youtube_link={result_tuple[2]!r}, "
+        f"thumbnail={result_tuple[3]!r}, channel={result_tuple[4]!r}, views={result_tuple[5]!r}, "
+        f"video_id={result_tuple[6]!r}, stream_url={result_tuple[7]!r}"
+    )
+
+    return result_tuple
