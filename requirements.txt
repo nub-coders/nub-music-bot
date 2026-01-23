@@ -31,8 +31,8 @@ pymongo
 requests
 pymongo
 lxml
+yt-dlp[default]
 fake_useragent
-git+https://github.com/yt-dlp/yt-dlp.git
 Pillow
 opencv-python-headless
 python-ffmpeg
