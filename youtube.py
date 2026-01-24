@@ -297,6 +297,7 @@ def get_video_details(video_id):
             "no_warnings": True,
             "skip_download": True,
             "cookiesfrombrowser": ("firefox",),
+            "format": "best",
 
             # Performance optimizations
             "extract_flat": False,  # We need full info
@@ -380,6 +381,7 @@ async def handle_youtube_ytdlp(argument):
             "no_warnings": True,
             "skip_download": True,
             "cookiesfrombrowser": ("firefox",),
+            "format": "best",
 
             # Performance optimizations
             "extract_flat": False,
