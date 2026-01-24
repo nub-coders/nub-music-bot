@@ -2,8 +2,6 @@ import pkg_resources
 import requests
 import subprocess
 import sys
-import logging
-from logging.handlers import RotatingFileHandler
 import os
 import re
 import json
@@ -12,47 +10,6 @@ from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 from yt_dlp import YoutubeDL
 import yt_dlp
-
-logger = logging.getLogger(__name__)
-
-LOG_LEVEL = os.getenv("NUB_LOG_LEVEL", "INFO").upper()
-LOG_DIR = os.getenv("NUB_LOG_DIR", "logs")
-LOG_FILE = os.path.join(LOG_DIR, "youtube.log")
-
-
-def configure_logger():
-    """Configure a detailed, module-scoped logger with console and rotating file output."""
-    if getattr(configure_logger, "_configured", False):
-        return logger
-
-    level = logging._nameToLevel.get(LOG_LEVEL, logging.INFO)
-    formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)s | youtube | %(funcName)s:%(lineno)d | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(level)
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
-
-    try:
-        os.makedirs(LOG_DIR, exist_ok=True)
-        file_handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=3)
-        file_handler.setLevel(level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-    except OSError as e:
-        logger.warning(f"Could not set up file logging: {e}")
-
-    logger.setLevel(level)
-    logger.propagate = False
-    configure_logger._configured = True
-    logger.debug("Detailed logger configured")
-    return logger
-
-
-configure_logger()
 
 # API Configuration
 API_TOKEN = os.getenv('NUB_YTDLP_API')  # from environment variable
@@ -70,10 +27,8 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
         data = response.json()
 
         if 'error' in data:
-            logger.error(f"API returned error: {data.get('error')}")
             return None, None, None, None, None, None, None, None, data.get('error')
         
-        logger.info(f"Successfully retrieved video info: {data.get('title', 'N/A')}")
         return (
             data.get('title', 'N/A'),
             data.get('video_id', 'N/A'),
@@ -86,7 +41,6 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
             data.get('time_taken', 'N/A')
         )
     except requests.RequestException as e:
-        logger.error(f"Request failed for video info: {str(e)}")
         return None, None, None, None, None, None, None, None, str(e)
 
 def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str, int, int, str, str]]:
@@ -101,7 +55,6 @@ def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str,
         data = response.json()
 
         if 'error' in data:
-            logger.error(f"Search API returned error: {data.get('error')}")
             return []
         
         results = []
@@ -115,10 +68,8 @@ def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str,
                 video.get('thumbnail', 'N/A'),
                 video.get('youtube_link', 'N/A')
             ))
-        logger.info(f"Found {len(results)} video results")
         return results
     except requests.RequestException as e:
-        logger.error(f"Search request failed: {str(e)}")
         return []
 
 def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
@@ -143,7 +94,6 @@ def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
             data.get('reset_time', 'N/A')
         )
     except requests.RequestException as e:
-        logger.error(f"Failed to get rate limit status: {str(e)}")
         return 0, 0, 0, False, str(e)
 
 def extract_video_id(url):
@@ -174,7 +124,6 @@ def extract_video_id(url):
         return None
 
     except Exception as e:
-        logger.error(f"Error extracting video ID from {url}: {str(e)}")
         return f"Error extracting video ID: {str(e)}"
 
 
@@ -233,7 +182,6 @@ def time_to_seconds(time):
         seconds = sum(int(x) * 60**i for i, x in enumerate(reversed(stringt.split(":"))))
         return seconds
     except Exception as e:
-        logger.error(f"Error converting time {stringt} to seconds: {str(e)}")
         return 0
 
 def is_ytdlp_updated():
@@ -246,45 +194,31 @@ def is_ytdlp_updated():
         response = requests.get('https://pypi.org/pypi/yt-dlp/json', timeout=10)
         latest_version = response.json()['info']['version']
         
-        logger.info(f"yt-dlp installed version: {installed_version}")
-        logger.info(f"yt-dlp latest version: {latest_version}")
-        
         return installed_version == latest_version
     except Exception as e:
-        logger.error(f"Error checking yt-dlp version: {e}")
         return False
 
 def update_ytdlp():
     """Update yt-dlp to the latest version"""
     try:
-        logger.info("Updating yt-dlp...")
         result = subprocess.run([
             sys.executable, "-m", "pip", "install", "-U", "yt-dlp"
         ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
-            logger.info("yt-dlp updated successfully!")
             return True
         else:
-            logger.error(f"Failed to update yt-dlp: {result.stderr}")
             return False
     except Exception as e:
-        logger.error(f"Error updating yt-dlp: {e}")
         return False
 
 async def check_and_update_ytdlp():
     """Check and update yt-dlp if needed"""
     try:
         if not is_ytdlp_updated():
-            logger.info("yt-dlp is outdated, updating...")
-            if update_ytdlp():
-                logger.info("yt-dlp has been updated to the latest version")
-            else:
-                logger.warning("Failed to update yt-dlp, continuing with current version")
-        else:
-            logger.info("yt-dlp is already up to date")
+            update_ytdlp()
     except Exception as e:
-        logger.error(f"Error in yt-dlp version check: {e}")
+        pass
 
 def extract_best_format(formats):
     """Pick the best format (progressive MP4 preferred) and return URL"""
@@ -330,7 +264,6 @@ def get_video_details(video_id):
     # First try API if token is available
     if API_TOKEN:
         try:
-            logger.info("Attempting API request for video details...")
             api_result = get_video_info(video_id)
             
             if api_result and api_result[0] and api_result[0] != "N/A":
@@ -340,7 +273,6 @@ def get_video_details(video_id):
                 if isinstance(duration, int):
                     duration = format_duration(duration)
                 
-                logger.info(f"API request successful, took {time_taken}")
                 return {
                     'title': title,
                     'thumbnail': thumbnail,
@@ -353,11 +285,9 @@ def get_video_details(video_id):
                     'video_id': video_id_result
                 }
             else:
-                logger.warning("API returned invalid data, falling back to yt-dlp")
+                pass
         except Exception as e:
-            logger.error(f"API request failed: {e}, falling back to yt-dlp")
-    else:
-        logger.info("No API token found, using yt-dlp")
+            pass
 
     # Fallback to yt-dlp
     try:
@@ -510,7 +440,6 @@ async def handle_youtube_ytdlp(argument):
             return (title, duration_formatted, youtube_link, thumbnail_url, channel_name, views, video_id, stream_url)
 
     except Exception as e:
-        logger.error(f"Error in handle_youtube_ytdlp: {e}")
         return None
 
 async def handle_youtube(argument):
@@ -526,7 +455,6 @@ async def handle_youtube(argument):
     details = get_video_details(argument)
     
     if 'error' in details:
-        logger.error(f"Failed to get video details: {details.get('error')}")
         return ("Error", "00:00", None, None, None, None, None, None)
     
     # Convert dict result to tuple format
@@ -539,13 +467,6 @@ async def handle_youtube(argument):
         details.get('view_count', 'N/A'),
         details.get('video_id', 'N/A'),
         details.get('stream_url', 'N/A')
-    )
-
-    logger.info(
-        "handle_youtube returning: "
-        f"title={result_tuple[0]!r}, duration={result_tuple[1]!r}, youtube_link={result_tuple[2]!r}, "
-        f"thumbnail={result_tuple[3]!r}, channel={result_tuple[4]!r}, views={result_tuple[5]!r}, "
-        f"video_id={result_tuple[6]!r}, stream_url={result_tuple[7]!r}"
     )
 
     return result_tuple
