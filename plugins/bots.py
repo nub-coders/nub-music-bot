@@ -45,8 +45,10 @@ from database import find_one, push_to_array, pull_from_array, set_fields, colle
 async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
     """Join voice call and start streaming"""
     # Trim the title to ensure it meets the length requirements
+    original_title = title
     title = trim_title(title)
-    print(f"[THUMB] {thumb}")
+    logger.debug(f"[join_call] Title trimmed from: {original_title} -> {title}")
+    logger.debug(f"[join_call] Thumb value received: {thumb}")
     logger.info(f"[join_call] Starting join_call for chat {chat.id} (Title: {title}, Mode: {mode})")
     logger.debug(f"[join_call] Parameters - youtube_link: {youtube_link}, stream_url: {stream_url}, duration: {duration}")
     logger.debug(f"[join_call] Thumbnail: {thumb if thumb else 'None'} (type: {type(thumb).__name__})")
@@ -54,19 +56,20 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
     
     try:
         chat_id = chat.id
+        logger.debug(f"[join_call] Resolved chat_id: {chat_id}")
         # Set audio flags based on mode
         audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
         logger.debug(f"[join_call] Mode '{mode}' - audio_flags set to: {audio_flags}")
         
         position = len(queues.get(chat_id, [])) # Use get with default for safety
-        logger.debug(f"[join_call] Current queue position: {position}")
+        logger.debug(f"[join_call] Current queue position: {position}, queue_size: {len(queues.get(chat_id, []))}")
         
         # Determine the URL to use for streaming
         # If stream_url is provided, use it; otherwise extract from youtube_link
         logger.debug(f"[join_call] Determining stream source...")
         if stream_url:
             stream_source = stream_url
-            logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}...")
+            logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}... (len={len(stream_url)})")
         elif youtube_link:
             logger.info(f"[join_call] Extracting stream URL from YouTube link: {youtube_link}")
             stream_source = get_stream_url(youtube_link)
@@ -74,19 +77,19 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
                 logger.warning(f"[join_call] Failed to extract stream URL, falling back to youtube_link")
                 stream_source = youtube_link
             else:
-                logger.info(f"[join_call] Successfully extracted stream URL: {stream_source[:100]}...")
+                logger.info(f"[join_call] Successfully extracted stream URL: {stream_source[:100]}... (len={len(stream_source)})")
         else:
             logger.warning(f"[join_call] No stream_url or youtube_link provided")
             stream_source = None
-            
-        print(stream_source)
+
+        logger.debug(f"[join_call] Final stream source resolved: {stream_source[:120]}..." if stream_source else "[join_call] Final stream source resolved: None")
         if not stream_source:
             logger.error(f"[join_call] No stream source provided (neither stream_url nor youtube_link) for chat {chat_id}")
             await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
             return await remove_active_chat(clients["bot"], chat_id)
 
         logger.info(f"[join_call] Attempting to play: {title} from {stream_source[:100]}... in chat {chat_id}")
-        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p")
+        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p; audio_flags={audio_flags}")
 
         await clients["call_py"].play(
             chat_id,
