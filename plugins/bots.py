@@ -420,7 +420,7 @@ async def active_chats(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply(f"🚫 {bold_sans('UNAUTHORIZED')}\n\n💎 {italic_sans('This is an Owner/Sudoer exclusive command')}")
 
     # Use PyTgCalls.calls to get active calls directly
     active_calls = await call_py.calls
@@ -437,12 +437,12 @@ async def active_chats(client, message):
 
         titles_str = '\n'.join(titles)
         reply_text = (
-            f"<b>Active group calls:</b>\n"
+            f"🎵 {bold_sans('Active Voice Chats')}\n"
             f"<blockquote expandable>{titles_str}</blockquote>\n"
-            f"<b>Total:</b> {len(active_calls)}"
+            f"✨ {bold_sans('Total:')} {len(active_calls)}"
         )
     else:
-        reply_text = "<b>Active Voice Chats:</b>\n<blockquote>No active group calls</blockquote>"
+        reply_text = f"🎵 {bold_sans('Active Voice Chats')}\n<blockquote>😴 {italic_sans('No active group calls')}</blockquote>"
 
     await message.reply_text(reply_text)
 
@@ -624,13 +624,13 @@ async def seek_handler_func(client, message):
 @admin_only()
 async def cancel_spam(client, message):
     if not message.chat.id in spam_chats:
-        return await message.reply("**Looks like there is no tagall here.**")
+        return await message.reply(f"ℹ️ {italic_sans('No active mention process running here')}")
     else:
         try:
             spam_chats.remove(message.chat.id)
         except:
             pass
-        return await message.reply("**Dismissing Mention.**")
+        return await message.reply(f"✅ {bold_sans('Mention Dismissed Successfully')}")
 
 @Client.on_message(filters.command("del") & filters.group)
 @admin_only()
@@ -647,7 +647,7 @@ async def delete_message_handler(client, message):
         except Exception as e:
             await message.reply(f"Error deleting message: {str(e)}")
     else:
-        await message.reply("**Please reply to a message to delete it.**")
+        await message.reply(f"⚠️ {italic_sans('Please reply to a message to delete it')}")
 
 
 @Client.on_message(filters.command("auth") & filters.group)
@@ -672,7 +672,7 @@ async def auth_user(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"**Owner is already authorized everywhere.**")
+                        return await message.reply(f"👑 {bold_sans('Owner is already authorized everywhere')}")
 
             # Check if user can be authorized
             if (replied_user_id != message.chat.id and
@@ -688,13 +688,13 @@ async def auth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     )
-                    await message.reply(f"User {replied_user_id} has been authorized in this chat.")
+                    await message.reply(f"✅ {bold_sans('Authorized')} \n👤 User {replied_user_id} can now use admin commands")
                 else:
-                    await message.reply(f"User {replied_user_id} is already authorized in this chat.")
+                    await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is already authorized')}")
             else:
-                await message.reply("You cannot authorize yourself or an anonymous user.")
+                await message.reply(f"🚫 {italic_sans('You cannot authorize yourself or an anonymous user')}")
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -710,13 +710,13 @@ async def auth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     )
-                    await message.reply(f"User {user_id_to_auth} has been authorized in this chat.")
+                    await message.reply(f"✅ {bold_sans('Authorized')} \n👤 User {user_id_to_auth} can now use admin commands")
                 else:
-                    await message.reply(f"User {user_id_to_auth} is already authorized in this chat.")
+                    await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_auth} {italic_sans('is already authorized')}")
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
 
 @Client.on_message(filters.command("unauth") & filters.group)
 @admin_only()
@@ -738,7 +738,7 @@ async def unauth_user(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"**You can't remove authorization from owner.**")
+                        return await message.reply(f"👑 {bold_sans('Cannot remove authorization from owner')}")
 
             # Check if user can be unauthorized using global AUTH
             if replied_user_id in AUTH[str(chat_id)]:
@@ -749,11 +749,11 @@ async def unauth_user(client, message):
                     {"$set": {'auth_users': AUTH}},
                     upsert=True
                 )
-                await message.reply(f"User {replied_user_id} has been removed from authorized users in this chat.")
+                await message.reply(f"🔓 {bold_sans('Unauthorized')} \n👤 User {replied_user_id} removed from admin list")
             else:
-                await message.reply(f"User {replied_user_id} is not authorized in this chat.")
+                await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is not authorized')}")
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -769,13 +769,13 @@ async def unauth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     )
-                    await message.reply(f"User {user_id_to_unauth} has been removed from authorized users in this chat.")
+                    await message.reply(f"🔓 {bold_sans('Unauthorized')} \n👤 User {user_id_to_unauth} removed from admin list")
                 else:
-                    await message.reply(f"User {user_id_to_unauth} is not authorized in this chat.")
+                    await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_unauth} {italic_sans('is not authorized')}")
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
 
 @Client.on_message(filters.command("block"))
 async def block_user(client, message):
@@ -796,7 +796,7 @@ async def block_user(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply(f"🚫 {bold_sans('UNAUTHORIZED')}\n\n💎 {italic_sans('This is an Owner/Sudoer exclusive command')}")
 
     # Check if the message is a reply
     if message.reply_to_message:
@@ -809,7 +809,7 @@ async def block_user(client, message):
                with open(admin_file, "r") as file:
                  admin_ids = [int(line.strip()) for line in file.readlines()]
                  if replied_user_id in admin_ids:
-                     return await message.reply(f"**MF\n\nYou can't block my owner.**")
+                      return await message.reply(f"👑 {bold_sans('Cannot block the owner')}")
             # Check if the replied user is the same as the current chat (group) id
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self and not OWNER_ID == replied_user_id:
                 if replied_user_id not in BLOCK:
@@ -818,14 +818,14 @@ async def block_user(client, message):
                     collection.update_one({"bot_id": client.me.id},
                                         {"$push": {'busers': replied_user_id}},
                                         upsert=True)
-                    await message.reply(f"User {replied_user_id} has been added to blocklist.")
+                    await message.reply(f"🚫 {bold_sans('User Blocked')} \n👤 User {replied_user_id} added to blocklist")
                 else:
-                   return await message.reply(f"User {replied_user_id} already in the blocklist.")
+                   return await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is already blocked')}")
 
             else:
-                await message.reply("You cannot block yourself or a anonymous user")
+                await message.reply(f"⚠️ {italic_sans('Cannot block yourself or anonymous user')}")
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -840,13 +840,13 @@ async def block_user(client, message):
                                         {"$push": {'busers': user_id_to_block}},
                                         upsert=True
                                     )
-                    await message.reply(f"User {user_id_to_block} has been added to blocklist.")
+                    await message.reply(f"🚫 {bold_sans('User Blocked')} \n👤 User {user_id_to_block} added to blocklist")
                 else:
-                   return await message.reply(f"User {user_id_to_block} already in the blocklist.")
+                   return await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_block} {italic_sans('is already blocked')}")
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
 
 @Client.on_message(filters.command("reboot") & filters.private)
 async def reboot_handler(client: Client, message: Message):
@@ -2326,7 +2326,7 @@ async def end_handler_func(client, message):
        await remove_active_chat(client, message.chat.id)
        queues[message.chat.id].clear()
        await client.send_message(message.chat.id,
-f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}"
+f"✅ {bold_sans('QUEUE CLEARED')}!\n╭──────────────╮\n│ 📡 {italic_sans('Streaming stopped')}\n╰──────────────╯\n👤 {message.from_user.mention()}"
             )
        await call_py.leave_call(message.chat.id)
        playing[message.chat.id].clear()
@@ -2597,7 +2597,7 @@ async def resume_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.resume(message.chat.id)
-       await client.send_message(message.chat.id, f"▶️ 𝗥𝗘𝗦𝗨𝗠𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗽𝗮𝘂𝘀𝗲 𝘁𝗼 𝘀𝘁𝗼𝗽\n┗ 👤 {message.from_user.mention()}")
+       await client.send_message(message.chat.id, f"▶️ {bold_sans('RESUMED')}!\n╭──────────────╮\n│ 🎵 {italic_sans('Use /pause to stop')}\n╰──────────────╯\n👤 {message.from_user.mention()}")
    else: await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
   except NotInCallError:
      await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
@@ -2614,7 +2614,7 @@ async def pause_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.pause(message.chat.id)
-       await client.send_message(message.chat.id, f"⏸️ 𝗣𝗔𝗨𝗦𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗿𝗲𝘀𝘂𝗺𝗲 𝘁𝗼 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲\n┗ 👤 {message.from_user.mention()}"
+       await client.send_message(message.chat.id, f"⏸️ {bold_sans('PAUSED')}!\n╭──────────────╮\n│ ▶️ {italic_sans('Use /resume to continue')}\n╰──────────────╯\n👤 {message.from_user.mention()}"
 )
    else:
        await client.send_message(message.chat.id,  f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
