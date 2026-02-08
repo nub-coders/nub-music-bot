@@ -1,8 +1,12 @@
 """
 Async MongoDB database handler for nub-music-bot
 """
+import asyncio
+import logging
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
+
+logger = logging.getLogger(__name__)
 
 MONGO_URI = os.getenv("MONGODB_URI", "mongodb+srv://nubcoders:nubcoders@music.8rxlsum.mongodb.net/?retryWrites=true&w=majority&appName=music")
 DB_NAME = os.getenv("DB_NAME", "musicbot")
@@ -13,6 +17,19 @@ db = client[DB_NAME]
 # Collections
 user_sessions = db["user_sessions"]
 collection = db["collection"]
+
+
+async def _bg_db_task(coro):
+    """Fire-and-forget wrapper for low-priority MongoDB writes."""
+    try:
+        await coro
+    except Exception as e:
+        logger.warning(f"[bg_db] Low-priority DB write failed: {e}")
+
+
+def db_task(coro):
+    """Schedule a MongoDB write as a low-priority background task."""
+    asyncio.create_task(_bg_db_task(coro))
 
 async def update_one(collection, filter, update, upsert=False):
     return await collection.update_one(filter, update, upsert=upsert)

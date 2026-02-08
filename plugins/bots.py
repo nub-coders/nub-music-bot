@@ -39,176 +39,8 @@ from config import *
 from fonts import *
 from tools import *
 from youtube import handle_youtube, extract_video_id, format_duration
-from tools import trim_title
-from database import find_one, push_to_array, pull_from_array, set_fields, collection, user_sessions
-
-async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
-    """Join voice call and start streaming"""
-    # Trim the title to ensure it meets the length requirements
-    original_title = title
-    title = trim_title(title)
-    logger.debug(f"[join_call] Title trimmed from: {original_title} -> {title}")
-    logger.debug(f"[join_call] Thumb value received: {thumb}")
-    logger.info(f"[join_call] Starting join_call for chat {chat.id} (Title: {title}, Mode: {mode})")
-    logger.debug(f"[join_call] Parameters - youtube_link: {youtube_link}, stream_url: {stream_url}, duration: {duration}")
-    logger.debug(f"[join_call] Thumbnail: {thumb if thumb else 'None'} (type: {type(thumb).__name__})")
-    logger.debug(f"[join_call] Requested by: {by.id if hasattr(by, 'id') else by}")
-    
-    try:
-        chat_id = chat.id
-        logger.debug(f"[join_call] Resolved chat_id: {chat_id}")
-        # Set audio flags based on mode
-        audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
-        logger.debug(f"[join_call] Mode '{mode}' - audio_flags set to: {audio_flags}")
-        
-        position = len(queues.get(chat_id, [])) # Use get with default for safety
-        logger.debug(f"[join_call] Current queue position: {position}, queue_size: {len(queues.get(chat_id, []))}")
-        
-        # Determine the URL to use for streaming
-        # If stream_url is provided, use it; otherwise extract from youtube_link
-        logger.debug(f"[join_call] Determining stream source...")
-        if stream_url:
-            stream_source = stream_url
-            logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}... (len={len(stream_url)})")
-        elif youtube_link:
-            logger.info(f"[join_call] Extracting stream URL from YouTube link: {youtube_link}")
-            stream_source = get_stream_url(youtube_link)
-            if not stream_source:
-                logger.warning(f"[join_call] Failed to extract stream URL, falling back to youtube_link")
-                stream_source = youtube_link
-            else:
-                logger.info(f"[join_call] Successfully extracted stream URL: {stream_source[:100]}... (len={len(stream_source)})")
-        else:
-            logger.warning(f"[join_call] No stream_url or youtube_link provided")
-            stream_source = None
-
-        logger.debug(f"[join_call] Final stream source resolved: {stream_source[:120]}..." if stream_source else "[join_call] Final stream source resolved: None")
-        if not stream_source:
-            logger.error(f"[join_call] No stream source provided (neither stream_url nor youtube_link) for chat {chat_id}")
-            await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
-            return await remove_active_chat(clients["bot"], chat_id)
-
-        logger.info(f"[join_call] Attempting to play: {title} from {stream_source[:100]}... in chat {chat_id}")
-        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p; audio_flags={audio_flags}")
-
-        await clients["call_py"].play(
-            chat_id,
-            MediaStream(
-                stream_source,
-                AudioQuality.STUDIO,
-                VideoQuality.HD_720p,
-                video_flags=audio_flags,
-            ),
-        )
-        
-        logger.info(f"[join_call] Successfully started streaming in chat {chat_id}")
-
-        # Update playing status and timestamp
-        logger.debug(f"[join_call] Updating playing status for chat {chat_id}")
-        playing[chat_id] = {
-            "message": message,
-            "title": title,
-            "yt_link": youtube_link,  # Keep original youtube_link for reference
-            "stream_url": stream_source, # Store the actual stream source used
-            "chat": chat,
-            "by": by,
-            "duration": duration,
-            "mode": mode,
-            "thumb": thumb
-        }
-        played[chat_id] = int(time.time())
-        logger.debug(f"[join_call] Playing status updated, timestamp: {played[chat_id]}")
-
-        # Add current time to database for statistics
-        try:
-            logger.debug(f"[join_call] Saving playtime to database for bot {clients['bot'].me.id}")
-            collection.update_one(
-                {"bot_id": clients["bot"].me.id},
-                {"$push": {"dates": datetime.datetime.now()}},
-                upsert=True
-            )
-            logger.debug(f"[join_call] Playtime saved successfully")
-        except Exception as e:
-            logger.warning(f"[join_call] Error saving playtime: {e}")
-
-        # Creating the inline keyboard with buttons arranged in two rows
-        logger.debug(f"[join_call] Creating inline keyboard for playback controls")
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(text="▷", callback_data="resume"),
-                InlineKeyboardButton(text="II", callback_data="pause"),
-                InlineKeyboardButton(text="‣‣I", callback_data="skip"),
-                InlineKeyboardButton(text="▢", callback_data="end"),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="✖ Close", callback_data="close"
-                )
-            ],
-        ])
-
-        # Constructing the message text using play_styles
-        # Using lightyagami for formatting, assuming it's a utility function
-        # Ensure lightyagami and gvarstatus are available in this scope or imported
-        # For now, using placeholder formatting
-        logger.debug(f"[join_call] Constructing message text with play_styles")
-        mode_formatted = lightyagami(mode) if 'lightyagami' in globals() else mode
-        title_formatted = lightyagami(title) if 'lightyagami' in globals() else title
-        
-        # Link the title if it's a YouTube link and not a local file
-        display_title = f"[{title_formatted}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if youtube_link and not os.path.exists(youtube_link) else title_formatted
-        
-        style_index = int(await gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
-        logger.debug(f"[join_call] Using play_style index: {style_index}")
-        
-        message_text = play_styles.get(style_index, play_styles[11]).format(
-            mode_formatted,
-            display_title,
-            duration,
-            by.mention() if hasattr(by, 'mention') else by # Ensure 'by' has a mention method
-        )
-
-        logger.debug(f"[join_call] Sending playback notification to chat {message.chat.id}")
-        # Check if thumbnail is valid before sending
-        if thumb:
-            try:
-                sent_message = await clients["bot"].send_photo(
-                    chat_id, thumb, message_text, reply_markup=keyboard
-                )
-                logger.info(f"[join_call] Playback notification sent with photo, message_id: {sent_message.id}")
-            except Exception as photo_err:
-                logger.warning(f"[join_call] Failed to send photo, sending as text instead: {photo_err}")
-                sent_message = await clients["bot"].send_message(
-                    chat_id, message_text, reply_markup=keyboard
-                )
-                logger.info(f"[join_call] Playback notification sent as text, message_id: {sent_message.id}")
-        else:
-            logger.warning(f"[join_call] Thumbnail is None, sending as text message")
-            sent_message = await clients["bot"].send_message(
-                chat_id, message_text, reply_markup=keyboard
-            )
-            logger.info(f"[join_call] Playback notification sent as text (no thumbnail), message_id: {sent_message.id}")
-
-        logger.debug(f"[join_call] Creating progress update task for duration: {duration}")
-        asyncio.create_task(update_progress_button(sent_message, duration, chat))
-
-        try:
-            logger.debug(f"[join_call] Attempting to delete original message")
-            await message.delete()
-            logger.debug(f"[join_call] Original message deleted successfully")
-        except Exception as e:
-            logger.warning(f"[join_call] Failed to delete original message: {e}")
-
-        logger.info(f"[join_call] Completed successfully - Now streaming '{title}' in chat {chat_id}")
-
-    except NoActiveGroupCall:
-        logger.error(f"[join_call] NoActiveGroupCall exception for chat {chat.id} - No active group calls")
-        await clients["bot"].send_message(chat.id, "ERROR: No active group calls")
-        return await remove_active_chat(clients["bot"], chat.id)
-    except Exception as e:
-        logger.error(f"[join_call] Unexpected error in chat {chat.id}: {type(e).__name__} - {e}", exc_info=True)
-        await clients["bot"].send_message(chat.id, f"ERROR: {e}")
-        return await remove_active_chat(clients["bot"], chat.id)
+from tools import trim_title, join_call
+from database import find_one, push_to_array, pull_from_array, set_fields, collection, user_sessions, db_task
 
 async def end(client, update):
     """Handle stream end event"""
@@ -420,7 +252,7 @@ async def active_chats(client, message):
     )
 
     if not is_authorized:
-        return await message.reply(f"🚫 {bold_sans('UNAUTHORIZED')}\n\n💎 {italic_sans('This is an Owner/Sudoer exclusive command')}")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
     # Use PyTgCalls.calls to get active calls directly
     active_calls = await call_py.calls
@@ -437,12 +269,12 @@ async def active_chats(client, message):
 
         titles_str = '\n'.join(titles)
         reply_text = (
-            f"🎵 {bold_sans('Active Voice Chats')}\n"
+            f"<b>Active group calls:</b>\n"
             f"<blockquote expandable>{titles_str}</blockquote>\n"
-            f"✨ {bold_sans('Total:')} {len(active_calls)}"
+            f"<b>Total:</b> {len(active_calls)}"
         )
     else:
-        reply_text = f"🎵 {bold_sans('Active Voice Chats')}\n<blockquote>😴 {italic_sans('No active group calls')}</blockquote>"
+        reply_text = "<b>Active Voice Chats:</b>\n<blockquote>No active group calls</blockquote>"
 
     await message.reply_text(reply_text)
 
@@ -624,13 +456,13 @@ async def seek_handler_func(client, message):
 @admin_only()
 async def cancel_spam(client, message):
     if not message.chat.id in spam_chats:
-        return await message.reply(f"ℹ️ {italic_sans('No active mention process running here')}")
+        return await message.reply("**Looks like there is no tagall here.**")
     else:
         try:
             spam_chats.remove(message.chat.id)
         except:
             pass
-        return await message.reply(f"✅ {bold_sans('Mention Dismissed Successfully')}")
+        return await message.reply("**Dismissing Mention.**")
 
 @Client.on_message(filters.command("del") & filters.group)
 @admin_only()
@@ -647,7 +479,7 @@ async def delete_message_handler(client, message):
         except Exception as e:
             await message.reply(f"Error deleting message: {str(e)}")
     else:
-        await message.reply(f"⚠️ {italic_sans('Please reply to a message to delete it')}")
+        await message.reply("**Please reply to a message to delete it.**")
 
 
 @Client.on_message(filters.command("auth") & filters.group)
@@ -672,7 +504,7 @@ async def auth_user(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"👑 {bold_sans('Owner is already authorized everywhere')}")
+                        return await message.reply(f"**Owner is already authorized everywhere.**")
 
             # Check if user can be authorized
             if (replied_user_id != message.chat.id and
@@ -682,19 +514,19 @@ async def auth_user(client, message):
                 # Check if user is already authorized in this chat using global AUTH
                 if replied_user_id not in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].append(replied_user_id)
-                    # Update database to maintain persistence
-                    await user_sessions.update_one(
+                    # Update database to maintain persistence (low priority)
+                    db_task(user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
-                    )
-                    await message.reply(f"✅ {bold_sans('Authorized')} \n👤 User {replied_user_id} can now use admin commands")
+                    ))
+                    await message.reply(f"User {replied_user_id} has been authorized in this chat.")
                 else:
-                    await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is already authorized')}")
+                    await message.reply(f"User {replied_user_id} is already authorized in this chat.")
             else:
-                await message.reply(f"🚫 {italic_sans('You cannot authorize yourself or an anonymous user')}")
+                await message.reply("You cannot authorize yourself or an anonymous user.")
         else:
-            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
+            await message.reply("The replied message is not from a user.")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -704,19 +536,19 @@ async def auth_user(client, message):
                 # Check if user is already authorized in this chat using global AUTH
                 if user_id_to_auth not in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].append(user_id_to_auth)
-                    # Update database to maintain persistence
-                    await user_sessions.update_one(
+                    # Update database to maintain persistence (low priority)
+                    db_task(user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
-                    )
-                    await message.reply(f"✅ {bold_sans('Authorized')} \n👤 User {user_id_to_auth} can now use admin commands")
+                    ))
+                    await message.reply(f"User {user_id_to_auth} has been authorized in this chat.")
                 else:
-                    await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_auth} {italic_sans('is already authorized')}")
+                    await message.reply(f"User {user_id_to_auth} is already authorized in this chat.")
             except ValueError:
-                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
+                await message.reply("Please provide a valid user ID.")
         else:
-            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
+            await message.reply("You need to reply to a message or provide a user ID.")
 
 @Client.on_message(filters.command("unauth") & filters.group)
 @admin_only()
@@ -738,22 +570,22 @@ async def unauth_user(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"👑 {bold_sans('Cannot remove authorization from owner')}")
+                        return await message.reply(f"**You can't remove authorization from owner.**")
 
             # Check if user can be unauthorized using global AUTH
             if replied_user_id in AUTH[str(chat_id)]:
                 AUTH[str(chat_id)].remove(replied_user_id)
-                # Update database to maintain persistence
-                await user_sessions.update_one(
+                # Update database to maintain persistence (low priority)
+                db_task(user_sessions.update_one(
                     {"bot_id": client.me.id},
                     {"$set": {'auth_users': AUTH}},
                     upsert=True
-                )
-                await message.reply(f"🔓 {bold_sans('Unauthorized')} \n👤 User {replied_user_id} removed from admin list")
+                ))
+                await message.reply(f"User {replied_user_id} has been removed from authorized users in this chat.")
             else:
-                await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is not authorized')}")
+                await message.reply(f"User {replied_user_id} is not authorized in this chat.")
         else:
-            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
+            await message.reply("The replied message is not from a user.")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -763,19 +595,19 @@ async def unauth_user(client, message):
                 # Check if user is authorized in this chat using global AUTH
                 if user_id_to_unauth in AUTH[str(chat_id)]:
                     AUTH[str(chat_id)].remove(user_id_to_unauth)
-                    # Update database to maintain persistence
-                    await user_sessions.update_one(
+                    # Update database to maintain persistence (low priority)
+                    db_task(user_sessions.update_one(
                         {"bot_id": client.me.id},
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
-                    )
-                    await message.reply(f"🔓 {bold_sans('Unauthorized')} \n👤 User {user_id_to_unauth} removed from admin list")
+                    ))
+                    await message.reply(f"User {user_id_to_unauth} has been removed from authorized users in this chat.")
                 else:
-                    await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_unauth} {italic_sans('is not authorized')}")
+                    await message.reply(f"User {user_id_to_unauth} is not authorized in this chat.")
             except ValueError:
-                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
+                await message.reply("Please provide a valid user ID.")
         else:
-            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
+            await message.reply("You need to reply to a message or provide a user ID.")
 
 @Client.on_message(filters.command("block"))
 async def block_user(client, message):
@@ -796,7 +628,7 @@ async def block_user(client, message):
     )
 
     if not is_authorized:
-        return await message.reply(f"🚫 {bold_sans('UNAUTHORIZED')}\n\n💎 {italic_sans('This is an Owner/Sudoer exclusive command')}")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
 
     # Check if the message is a reply
     if message.reply_to_message:
@@ -809,23 +641,23 @@ async def block_user(client, message):
                with open(admin_file, "r") as file:
                  admin_ids = [int(line.strip()) for line in file.readlines()]
                  if replied_user_id in admin_ids:
-                      return await message.reply(f"👑 {bold_sans('Cannot block the owner')}")
+                     return await message.reply(f"**MF\n\nYou can't block my owner.**")
             # Check if the replied user is the same as the current chat (group) id
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self and not OWNER_ID == replied_user_id:
                 if replied_user_id not in BLOCK:
                     BLOCK.append(replied_user_id)
-                    # Update database to maintain persistence
-                    collection.update_one({"bot_id": client.me.id},
+                    # Update database to maintain persistence (low priority)
+                    db_task(collection.update_one({"bot_id": client.me.id},
                                         {"$push": {'busers': replied_user_id}},
-                                        upsert=True)
-                    await message.reply(f"🚫 {bold_sans('User Blocked')} \n👤 User {replied_user_id} added to blocklist")
+                                        upsert=True))
+                    await message.reply(f"User {replied_user_id} has been added to blocklist.")
                 else:
-                   return await message.reply(f"ℹ️ {italic_sans('User')} {replied_user_id} {italic_sans('is already blocked')}")
+                   return await message.reply(f"User {replied_user_id} already in the blocklist.")
 
             else:
-                await message.reply(f"⚠️ {italic_sans('Cannot block yourself or anonymous user')}")
+                await message.reply("You cannot block yourself or a anonymous user")
         else:
-            await message.reply(f"⚠️ {italic_sans('The replied message is not from a user')}")
+            await message.reply("The replied message is not from a user.")
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -835,18 +667,18 @@ async def block_user(client, message):
                 # Block the user with the provided user ID using global BLOCK
                 if user_id_to_block not in BLOCK:
                     BLOCK.append(user_id_to_block)
-                    # Update database to maintain persistence
-                    collection.update_one({"bot_id": client.me.id},
+                    # Update database to maintain persistence (low priority)
+                    db_task(collection.update_one({"bot_id": client.me.id},
                                         {"$push": {'busers': user_id_to_block}},
                                         upsert=True
-                                    )
-                    await message.reply(f"🚫 {bold_sans('User Blocked')} \n👤 User {user_id_to_block} added to blocklist")
+                                    ))
+                    await message.reply(f"User {user_id_to_block} has been added to blocklist.")
                 else:
-                   return await message.reply(f"ℹ️ {italic_sans('User')} {user_id_to_block} {italic_sans('is already blocked')}")
+                   return await message.reply(f"User {user_id_to_block} already in the blocklist.")
             except ValueError:
-                await message.reply(f"⚠️ {italic_sans('Please provide a valid user ID')}")
+                await message.reply("Please provide a valid user ID.")
         else:
-            await message.reply(f"ℹ️ {italic_sans('Reply to a message or provide a user ID')}")
+            await message.reply("You need to reply to a message or provide a user ID.")
 
 @Client.on_message(filters.command("reboot") & filters.private)
 async def reboot_handler(client: Client, message: Message):
@@ -902,10 +734,10 @@ async def unblock_user(client, message):
         # Check if user is in blocklist using global BLOCK
         if replied_user_id in BLOCK:
             BLOCK.remove(replied_user_id)
-            # Update database to maintain persistence
-            collection.update_one({"bot_id": client.me.id},
+            # Update database to maintain persistence (low priority)
+            db_task(collection.update_one({"bot_id": client.me.id},
                                 {"$pull": {'busers': replied_user_id}},
-                                upsert=True)
+                                upsert=True))
             await message.reply(f"User {replied_user_id} has been removed from blocklist.")
         else:
             return await message.reply(f"User {replied_user_id} not in the blocklist.")
@@ -920,10 +752,10 @@ async def unblock_user(client, message):
                 # Check if user is in blocklist using global BLOCK
                 if target_user_id in BLOCK:
                     BLOCK.remove(target_user_id)
-                    # Update database to maintain persistence
-                    collection.update_one({"bot_id": client.me.id},
+                    # Update database to maintain persistence (low priority)
+                    db_task(collection.update_one({"bot_id": client.me.id},
                                         {"$pull": {'busers': target_user_id}},
-                                        upsert=True)
+                                        upsert=True))
                     await message.reply(f"User {target_user_id} has been removed from blocklist.")
                 else:
                     return await message.reply(f"User {target_user_id} not in the blocklist.")
@@ -2087,13 +1919,13 @@ async def get_user_data(user_id, key):
     return None
 
 async def set_user_data(user_id, key, value):
-    await user_sessions.update_one({"bot_id": user_id}, {"$set": {key: value}}, upsert=True)
+    db_task(user_sessions.update_one({"bot_id": user_id}, {"$set": {key: value}}, upsert=True))
 
 async def gvarstatus(user_id, key):
     return await get_user_data(user_id, key)
 
 async def unset_user_data(user_id, key):
-     await user_sessions.update_one({"bot_id": user_id}, {"$unset": {key: ''}}, upsert=True)
+     db_task(user_sessions.update_one({"bot_id": user_id}, {"$unset": {key: ''}}, upsert=True))
 
 
 def rename_file(old_name, new_name):
@@ -2172,12 +2004,11 @@ async def status(client, message):
     if user_data:
         # Clean old song entries and get count
         time_threshold = datetime.datetime.now() - datetime.timedelta(hours=24)
-        collection.update_one(
+        db_task(collection.update_one(
             {"bot_id": client.me.id},
             {"$pull": {"dates": {"$lt": time_threshold}}}
-        )
-        updated_data = await find_one(collection, {"bot_id": client.me.id})
-        play_count = len(updated_data.get('dates', [])) if updated_data else 0
+        ))
+        play_count = len([d for d in user_data.get('dates', []) if d >= time_threshold])
 
         users = user_data.get('users', [])
         total_users = len(users)
@@ -2326,7 +2157,7 @@ async def end_handler_func(client, message):
        await remove_active_chat(client, message.chat.id)
        queues[message.chat.id].clear()
        await client.send_message(message.chat.id,
-f"✅ {bold_sans('QUEUE CLEARED')}!\n╭──────────────╮\n│ 📡 {italic_sans('Streaming stopped')}\n╰──────────────╯\n👤 {message.from_user.mention()}"
+f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}"
             )
        await call_py.leave_call(message.chat.id)
        playing[message.chat.id].clear()
@@ -2597,7 +2428,7 @@ async def resume_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.resume(message.chat.id)
-       await client.send_message(message.chat.id, f"▶️ {bold_sans('RESUMED')}!\n╭──────────────╮\n│ 🎵 {italic_sans('Use /pause to stop')}\n╰──────────────╯\n👤 {message.from_user.mention()}")
+       await client.send_message(message.chat.id, f"▶️ 𝗥𝗘𝗦𝗨𝗠𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗽𝗮𝘂𝘀𝗲 𝘁𝗼 𝘀𝘁𝗼𝗽\n┗ 👤 {message.from_user.mention()}")
    else: await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
   except NotInCallError:
      await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
@@ -2614,7 +2445,7 @@ async def pause_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.pause(message.chat.id)
-       await client.send_message(message.chat.id, f"⏸️ {bold_sans('PAUSED')}!\n╭──────────────╮\n│ ▶️ {italic_sans('Use /resume to continue')}\n╰──────────────╯\n👤 {message.from_user.mention()}"
+       await client.send_message(message.chat.id, f"⏸️ 𝗣𝗔𝗨𝗦𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗿𝗲𝘀𝘂𝗺𝗲 𝘁𝗼 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲\n┗ 👤 {message.from_user.mention()}"
 )
    else:
        await client.send_message(message.chat.id,  f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
@@ -2879,10 +2710,10 @@ async def toggle_setting(client, callback_query):
     setting_to_toggle = callback_query.data.split("_", 1)[1]
     current_value = user_data.get(setting_to_toggle)
     new_value = not current_value
-    await user_sessions.update_one(
+    db_task(user_sessions.update_one(
         {"bot_id": sender_id},
         {"$set": {setting_to_toggle: new_value}}
-    )
+    ))
     await broadcast_command_handler(client, callback_query)
 
 

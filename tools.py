@@ -43,7 +43,7 @@ from pyrogram import Client, filters
 import gc
 import time
 from youtube import handle_youtube, get_video_details, extract_video_id, format_number, format_duration, time_to_seconds
-from database import user_sessions
+from database import user_sessions, db_task
 
 from pyrogram.errors import (
     FloodWait,
@@ -954,16 +954,165 @@ async def hd_stream_closed_kicked(client, update):
       logger.info(e)
 
 
+async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
+    """Join voice call and start streaming"""
+    original_title = title
+    title = trim_title(title)
+    logger.debug(f"[join_call] Title trimmed from: {original_title} -> {title}")
+    logger.debug(f"[join_call] Thumb value received: {thumb}")
+    logger.info(f"[join_call] Starting join_call for chat {chat.id} (Title: {title}, Mode: {mode})")
+    logger.debug(f"[join_call] Parameters - youtube_link: {youtube_link}, stream_url: {stream_url}, duration: {duration}")
+    logger.debug(f"[join_call] Thumbnail: {thumb if thumb else 'None'} (type: {type(thumb).__name__})")
+    logger.debug(f"[join_call] Requested by: {by.id if hasattr(by, 'id') else by}")
+
+    try:
+        chat_id = chat.id
+        logger.debug(f"[join_call] Resolved chat_id: {chat_id}")
+        audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
+        logger.debug(f"[join_call] Mode '{mode}' - audio_flags set to: {audio_flags}")
+
+        position = len(queues.get(chat_id, []))
+        logger.debug(f"[join_call] Current queue position: {position}, queue_size: {len(queues.get(chat_id, []))}")
+
+        logger.debug(f"[join_call] Determining stream source...")
+        if stream_url:
+            stream_source = stream_url
+            logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}... (len={len(stream_url)})")
+        elif youtube_link:
+            logger.info(f"[join_call] Extracting stream URL from YouTube link: {youtube_link}")
+            stream_source = get_stream_url(youtube_link)
+            if not stream_source:
+                logger.warning(f"[join_call] Failed to extract stream URL, falling back to youtube_link")
+                stream_source = youtube_link
+            else:
+                logger.info(f"[join_call] Successfully extracted stream URL: {stream_source[:100]}... (len={len(stream_source)})")
+        else:
+            logger.warning(f"[join_call] No stream_url or youtube_link provided")
+            stream_source = None
+
+        logger.debug(f"[join_call] Final stream source resolved: {stream_source[:120]}..." if stream_source else "[join_call] Final stream source resolved: None")
+        if not stream_source:
+            logger.error(f"[join_call] No stream source provided (neither stream_url nor youtube_link) for chat {chat_id}")
+            await clients["bot"].send_message(chat.id, "ERROR: Could not find a valid stream source.")
+            return await remove_active_chat(chat_id)
+
+        logger.info(f"[join_call] Attempting to play: {title} from {stream_source[:100]}... in chat {chat_id}")
+        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p; audio_flags={audio_flags}")
+
+        await clients["call_py"].play(
+            chat_id,
+            MediaStream(
+                stream_source,
+                AudioQuality.STUDIO,
+                VideoQuality.HD_720p,
+                video_flags=audio_flags,
+            ),
+        )
+
+        logger.info(f"[join_call] Successfully started streaming in chat {chat_id}")
+
+        logger.debug(f"[join_call] Updating playing status for chat {chat_id}")
+        playing[chat_id] = {
+            "message": message,
+            "title": title,
+            "yt_link": youtube_link,
+            "stream_url": stream_source,
+            "chat": chat,
+            "by": by,
+            "duration": duration,
+            "mode": mode,
+            "thumb": thumb
+        }
+        played[chat_id] = int(time.time())
+        logger.debug(f"[join_call] Playing status updated, timestamp: {played[chat_id]}")
+
+        logger.debug(f"[join_call] Scheduling playtime save to database for bot {clients['bot'].me.id}")
+        db_task(collection.update_one(
+            {"bot_id": clients["bot"].me.id},
+            {"$push": {"dates": datetime.datetime.now()}},
+            upsert=True
+        ))
+
+        logger.debug(f"[join_call] Creating inline keyboard for playback controls")
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(text="▷", callback_data="resume"),
+                InlineKeyboardButton(text="II", callback_data="pause"),
+                InlineKeyboardButton(text="‣‣I", callback_data="skip"),
+                InlineKeyboardButton(text="▢", callback_data="end"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="✖ Close", callback_data="close"
+                )
+            ],
+        ])
+
+        logger.debug(f"[join_call] Constructing message text with play_styles")
+        mode_formatted = lightyagami(mode) if 'lightyagami' in globals() else mode
+        title_formatted = lightyagami(title) if 'lightyagami' in globals() else title
+
+        display_title = f"[{title_formatted}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if youtube_link and not os.path.exists(youtube_link) else title_formatted
+
+        style_index = int(await gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
+        logger.debug(f"[join_call] Using play_style index: {style_index}")
+
+        message_text = play_styles.get(style_index, play_styles[11]).format(
+            mode_formatted,
+            display_title,
+            duration,
+            by.mention() if hasattr(by, 'mention') else by
+        )
+
+        logger.debug(f"[join_call] Sending playback notification to chat {message.chat.id}")
+        if thumb:
+            try:
+                sent_message = await clients["bot"].send_photo(
+                    chat_id, thumb, message_text, reply_markup=keyboard
+                )
+                logger.info(f"[join_call] Playback notification sent with photo, message_id: {sent_message.id}")
+            except Exception as photo_err:
+                logger.warning(f"[join_call] Failed to send photo, sending as text instead: {photo_err}")
+                sent_message = await clients["bot"].send_message(
+                    chat_id, message_text, reply_markup=keyboard
+                )
+                logger.info(f"[join_call] Playback notification sent as text, message_id: {sent_message.id}")
+        else:
+            logger.warning(f"[join_call] Thumbnail is None, sending as text message")
+            sent_message = await clients["bot"].send_message(
+                chat_id, message_text, reply_markup=keyboard
+            )
+            logger.info(f"[join_call] Playback notification sent as text (no thumbnail), message_id: {sent_message.id}")
+
+        logger.debug(f"[join_call] Creating progress update task for duration: {duration}")
+        asyncio.create_task(update_progress_button(sent_message, duration, chat))
+
+        try:
+            logger.debug(f"[join_call] Attempting to delete original message")
+            await message.delete()
+            logger.debug(f"[join_call] Original message deleted successfully")
+        except Exception as e:
+            logger.warning(f"[join_call] Failed to delete original message: {e}")
+
+        logger.info(f"[join_call] Completed successfully - Now streaming '{title}' in chat {chat_id}")
+
+    except NoActiveGroupCall:
+        logger.error(f"[join_call] NoActiveGroupCall exception for chat {chat.id} - No active group calls")
+        await clients["bot"].send_message(chat.id, "ERROR: No active group calls")
+        return await remove_active_chat(chat.id)
+    except Exception as e:
+        logger.error(f"[join_call] Unexpected error in chat {chat.id}: {type(e).__name__} - {e}", exc_info=True)
+        await clients["bot"].send_message(chat.id, f"ERROR: {e}")
+        return await remove_active_chat(chat.id)
+
+
 async def end(client, update):
 
-  try:
-        collection.update_one(
-            {"bot_id": clients["bot"].me.id},
-           {"$push": {'dates': datetime.datetime.now()}},
-            upsert=True
-        )
-  except Exception as e:
-        logger.info(f"Error saving playtime: {e}")
+  db_task(collection.update_one(
+      {"bot_id": clients["bot"].me.id},
+      {"$push": {'dates': datetime.datetime.now()}},
+      upsert=True
+  ))
   try:
     if update.chat_id in queues and queues[update.chat_id]:
       next_song = queues[update.chat_id].pop(0)
