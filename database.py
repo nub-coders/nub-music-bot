@@ -21,8 +21,13 @@ collection = db["collection"]
 
 async def _bg_db_task(coro):
     """Fire-and-forget wrapper for low-priority MongoDB writes."""
+    import inspect
     try:
-        await coro
+        # Check if coro is actually awaitable
+        if inspect.iscoroutine(coro) or inspect.isawaitable(coro):
+            await coro
+        else:
+            logger.warning(f"[bg_db] Received non-awaitable object: {type(coro).__name__}")
     except Exception as e:
         logger.warning(f"[bg_db] Low-priority DB write failed: {e}")
 
