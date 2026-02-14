@@ -1,4 +1,4 @@
-import pkg_resources
+
 import requests
 import subprocess
 import sys
@@ -223,16 +223,29 @@ def time_to_seconds(time):
 def is_ytdlp_updated():
     """Check if yt-dlp is up to date"""
     try:
-        # Get installed version
-        installed_version = pkg_resources.get_distribution('yt-dlp').version
+        # Get installed version using modern API
+        try:
+            from importlib.metadata import version, PackageNotFoundError
+            installed_version = version('yt-dlp')
+        except PackageNotFoundError:
+            logger.warning("[youtube.is_ytdlp_updated] yt-dlp not installed via pip")
+            return False
         
         # Get latest version from PyPI
         response = requests.get('https://pypi.org/pypi/yt-dlp/json', timeout=10)
+        response.raise_for_status()  # better error handling
         latest_version = response.json()['info']['version']
         
         is_current = installed_version == latest_version
-        logger.info(f"[youtube.is_ytdlp_updated] Installed={installed_version}, Latest={latest_version}, UpToDate={is_current}")
+        logger.info(
+            f"[youtube.is_ytdlp_updated] Installed={installed_version}, "
+            f"Latest={latest_version}, UpToDate={is_current}"
+        )
         return is_current
+    
+    except requests.RequestException as e:
+        logger.error(f"[youtube.is_ytdlp_updated] PyPI request failed: {e}")
+        return False
     except Exception as e:
         logger.error(f"[youtube.is_ytdlp_updated] Error: {e}")
         return False
