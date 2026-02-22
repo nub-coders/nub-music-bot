@@ -34,7 +34,7 @@ If you prefer running the bot on your own server or a VPS locally:
 
 #### 2. Get your credentials
 You will need to fetch your variables and set them in your environment:
-- `API_ID` & `API_HASH` from [my.telegram.org](https://my.telegram.org)yup
+- `API_ID` & `API_HASH` from [my.telegram.org](https://my.telegram.org)
 
 - `BOT_TOKEN` from [@BotFather](https://t.me/BotFather)
 - `OWNER_ID`: Your Telegram User ID.
