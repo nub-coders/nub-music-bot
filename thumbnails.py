@@ -127,7 +127,7 @@ async def get_thumb(title, duration, thumbnail, channel=None, views=None, videoi
             image_path = thumbnail
             # If no title provided and it's a local file, use default
             if not title:
-                title = "Telegram Local Stream"
+                title = "Now Playing"
         else:
             # Download thumbnail from URL
             async with aiohttp.ClientSession() as session:
@@ -153,75 +153,333 @@ async def get_thumb(title, duration, thumbnail, channel=None, views=None, videoi
 
         youtube = Image.open(image_path)
         image1 = changeImageSize(1280, 720, youtube)
-
         image2 = image1.convert("RGBA")
-        background = image2.filter(filter=ImageFilter.BoxBlur(20))
+        
+        # Create premium multi-gradient background
+        background = image2.filter(filter=ImageFilter.GaussianBlur(30))
         enhancer = ImageEnhance.Brightness(background)
-        background = enhancer.enhance(0.6)
-
-        start_gradient_color = random_color()
-        end_gradient_color = random_color()
-        gradient_image = generate_gradient(1280, 720, start_gradient_color, end_gradient_color)
-        background = Image.blend(background, gradient_image, alpha=0.2)
+        background = enhancer.enhance(0.3)
+        
+        # Create sophisticated tri-color gradient
+        gradient_colors = [
+            (138, 43, 226),   # Blue-Violet
+            (220, 20, 60),    # Crimson
+            (255, 140, 0),    # Dark Orange
+            (0, 191, 255),    # Deep Sky Blue
+            (255, 20, 147),   # Deep Pink
+            (50, 205, 50)     # Lime Green
+        ]
+        
+        primary_color = random.choice(gradient_colors)
+        gradient_colors.remove(primary_color)
+        secondary_color = random.choice(gradient_colors)
+        
+        # Create dynamic gradient overlay
+        gradient = Image.new('RGBA', (1280, 720), primary_color + (0,))
+        for y in range(720):
+            alpha = int(180 * (y / 720))
+            r = int(primary_color[0] + (secondary_color[0] - primary_color[0]) * (y / 720))
+            g = int(primary_color[1] + (secondary_color[1] - primary_color[1]) * (y / 720))
+            b = int(primary_color[2] + (secondary_color[2] - primary_color[2]) * (y / 720))
+            for x in range(1280):
+                gradient.putpixel((x, y), (r, g, b, alpha))
+        
+        background = Image.alpha_composite(background, gradient)
+        
+        # Add noise texture for premium feel
+        noise = Image.new('RGBA', (1280, 720), (0, 0, 0, 0))
+        noise_pixels = []
+        for y in range(720):
+            for x in range(1280):
+                if random.random() > 0.97:
+                    noise_pixels.append(((x, y), (255, 255, 255, random.randint(10, 30))))
+        for pixel in noise_pixels:
+            noise.putpixel(pixel[0], pixel[1])
+        background = Image.alpha_composite(background, noise)
 
         draw = ImageDraw.Draw(background)
-        arial = ImageFont.truetype("font2.ttf", 30)
-        font = ImageFont.truetype("font.ttf", 30)
-        title_font = ImageFont.truetype("font3.ttf", 45)
+        
+        # Modern font setup with better fallbacks
+        try:
+            title_font = ImageFont.truetype("font3.ttf", 52)
+        except:
+            try:
+                title_font = ImageFont.truetype("font.ttf", 52)
+            except:
+                title_font = ImageFont.load_default()
+        
+        try:
+            subtitle_font = ImageFont.truetype("font.ttf", 28)
+        except:
+            subtitle_font = ImageFont.load_default()
+        
+        try:
+            info_font = ImageFont.truetype("font2.ttf", 24)
+        except:
+            info_font = ImageFont.load_default()
+        
+        try:
+            time_font = ImageFont.truetype("font.ttf", 26)
+        except:
+            time_font = ImageFont.load_default()
 
-        circle_thumbnail = crop_center_circle(youtube, 400, 20, start_gradient_color)
-        circle_thumbnail = circle_thumbnail.resize((400, 400))
-        circle_position = (120, 160)
-        background.paste(circle_thumbnail, circle_position, circle_thumbnail)
-
-        text_x_position = 565
+        # Create glassmorphism card for content
+        card_x, card_y = 80, 80
+        card_width, card_height = 1120, 560
+        
+        # Glassmorphism background
+        glass_card = Image.new('RGBA', (card_width, card_height), (255, 255, 255, 0))
+        glass_draw = ImageDraw.Draw(glass_card)
+        
+        # Rounded rectangle with gradient
+        corner_radius = 30
+        glass_draw.rounded_rectangle(
+            [(0, 0), (card_width, card_height)],
+            radius=corner_radius,
+            fill=(255, 255, 255, 25),
+            outline=(255, 255, 255, 80),
+            width=2
+        )
+        
+        # Apply blur to glass card for frosted effect
+        glass_card = glass_card.filter(ImageFilter.GaussianBlur(2))
+        background.paste(glass_card, (card_x, card_y), glass_card)
+        
+        # Create premium circular album art with neon glow
+        album_size = 340
+        album_border = 8
+        neon_glow_color = primary_color
+        
+        # Create multiple glow layers for neon effect
+        for glow_layer in range(3, 0, -1):
+            glow_size = album_size + (glow_layer * 20)
+            glow = Image.new('RGBA', (glow_size, glow_size), (0, 0, 0, 0))
+            glow_draw = ImageDraw.Draw(glow)
+            glow_alpha = max(10, 50 - (glow_layer * 15))
+            glow_draw.ellipse(
+                [(0, 0), (glow_size, glow_size)],
+                fill=neon_glow_color + (glow_alpha,)
+            )
+            glow = glow.filter(ImageFilter.GaussianBlur(15 + glow_layer * 5))
+            glow_pos = (
+                card_x + 60 - (glow_size - album_size) // 2,
+                card_y + (card_height - glow_size) // 2
+            )
+            background.paste(glow, glow_pos, glow)
+        
+        # Album art circle
+        circle_thumbnail = crop_center_circle(youtube, album_size, album_border, (255, 255, 255), crop_scale=1.3)
+        album_position = (card_x + 60, card_y + (card_height - album_size) // 2)
+        background.paste(circle_thumbnail, album_position, circle_thumbnail)
+        
+        # Text content area
+        text_x = card_x + album_size + 120
+        text_area_width = card_width - album_size - 180
+        
+        # Title with gradient effect
         title1 = truncate(title)
-        draw_text_with_shadow(background, draw, (text_x_position, 180), title1[0], title_font, (255, 255, 255))
-        draw_text_with_shadow(background, draw, (text_x_position, 230), title1[1], title_font, (255, 255, 255))
-        draw_text_with_shadow(background, draw, (text_x_position, 320), f"{channel}  |  {views[:23]}", arial, (255, 255, 255))
-
-        line_length = 580
-        line_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
+        title_y = card_y + 100
+        
+        # Draw "NOW PLAYING" label
+        label_text = "NOW PLAYING"
+        draw_text_with_shadow(
+            background, draw, 
+            (text_x, title_y - 45), 
+            label_text, 
+            info_font, 
+            neon_glow_color,
+            shadow_offset=(2, 2),
+            shadow_blur=3
+        )
+        
+        # Song title - line 1
+        draw_text_with_shadow(
+            background, draw,
+            (text_x, title_y),
+            title1[0],
+            title_font,
+            (255, 255, 255),
+            shadow_offset=(3, 3),
+            shadow_blur=6
+        )
+        
+        # Song title - line 2
+        if title1[1]:
+            draw_text_with_shadow(
+                background, draw,
+                (text_x, title_y + 60),
+                title1[1],
+                title_font,
+                (255, 255, 255),
+                shadow_offset=(3, 3),
+                shadow_blur=6
+            )
+        
+        # Artist/Channel info with icon
+        artist_y = title_y + 140
+        artist_text = f"{channel}"
+        draw_text_with_shadow(
+            background, draw,
+            (text_x, artist_y),
+            artist_text,
+            subtitle_font,
+            (220, 220, 255),
+            shadow_offset=(2, 2),
+            shadow_blur=4
+        )
+        
+        # Views count
+        views_text = f"{views[:23]} views"
+        draw_text_with_shadow(
+            background, draw,
+            (text_x, artist_y + 40),
+            views_text,
+            info_font,
+            (200, 200, 230),
+            shadow_offset=(2, 2),
+            shadow_blur=3
+        )
+        
+        # Modern progress bar
+        progress_y = card_y + card_height - 140
+        progress_x = text_x
+        progress_width = text_area_width - 20
+        progress_height = 6
+        
+        # Progress bar background (track)
+        track_bg = Image.new('RGBA', (progress_width, progress_height + 20), (0, 0, 0, 0))
+        track_draw = ImageDraw.Draw(track_bg)
+        track_draw.rounded_rectangle(
+            [(0, 10), (progress_width, 10 + progress_height)],
+            radius=progress_height // 2,
+            fill=(255, 255, 255, 60)
+        )
+        background.paste(track_bg, (progress_x, progress_y), track_bg)
+        
+        # Progress bar fill
         if duration != "Live":
-            color_line_percentage = random.uniform(0.15, 0.85)
-            color_line_length = int(line_length * color_line_percentage)
-            white_line_length = line_length - color_line_length
-
-            start_point_color = (text_x_position, 380)
-            end_point_color = (text_x_position + color_line_length, 380)
-            draw.line([start_point_color, end_point_color], fill=line_color, width=9)
-
-            start_point_white = (text_x_position + color_line_length, 380)
-            end_point_white = (text_x_position + line_length, 380)
-            draw.line([start_point_white, end_point_white], fill="white", width=8)
-
-            circle_radius = 10
-            circle_position = (end_point_color[0], end_point_color[1])
-            draw.ellipse([circle_position[0] - circle_radius, circle_position[1] - circle_radius,
-                          circle_position[0] + circle_radius, circle_position[1] + circle_radius], fill=line_color)
-
+            progress_percentage = random.uniform(0.15, 0.85)
+            filled_width = int(progress_width * progress_percentage)
+            
+            # Create gradient progress bar
+            progress_bar = Image.new('RGBA', (filled_width, progress_height + 20), (0, 0, 0, 0))
+            progress_draw = ImageDraw.Draw(progress_bar)
+            
+            # Gradient from primary to secondary color
+            for x in range(filled_width):
+                progress_ratio = x / filled_width
+                r = int(primary_color[0] + (secondary_color[0] - primary_color[0]) * progress_ratio)
+                g = int(primary_color[1] + (secondary_color[1] - primary_color[1]) * progress_ratio)
+                b = int(primary_color[2] + (secondary_color[2] - primary_color[2]) * progress_ratio)
+                progress_draw.line([(x, 10), (x, 10 + progress_height)], fill=(r, g, b, 255), width=1)
+            
+            # Add glow to progress bar
+            progress_bar = progress_bar.filter(ImageFilter.GaussianBlur(1))
+            background.paste(progress_bar, (progress_x, progress_y), progress_bar)
+            
+            # Progress indicator (circle)
+            indicator_x = progress_x + filled_width
+            indicator_y = progress_y + 13
+            indicator_radius = 10
+            
+            # Glow for indicator
+            for glow in range(3, 0, -1):
+                glow_radius = indicator_radius + glow * 3
+                draw.ellipse(
+                    [indicator_x - glow_radius, indicator_y - glow_radius,
+                     indicator_x + glow_radius, indicator_y + glow_radius],
+                    fill=primary_color + (30,)
+                )
+            
+            # Actual indicator
+            draw.ellipse(
+                [indicator_x - indicator_radius, indicator_y - indicator_radius,
+                 indicator_x + indicator_radius, indicator_y + indicator_radius],
+                fill=(255, 255, 255, 255)
+            )
         else:
-            line_color = (255, 0, 0)
-            start_point_color = (text_x_position, 380)
-            end_point_color = (text_x_position + line_length, 380)
-            draw.line([start_point_color, end_point_color], fill=line_color, width=9)
-
-            circle_radius = 10
-            circle_position = (end_point_color[0], end_point_color[1])
-            draw.ellipse([circle_position[0] - circle_radius, circle_position[1] - circle_radius,
-                          circle_position[0] + circle_radius, circle_position[1] + circle_radius], fill=line_color)
-
-        draw_text_with_shadow(background, draw, (text_x_position, 400), "00:00", arial, (255, 255, 255))
-        draw_text_with_shadow(background, draw, (1080, 400), duration, arial, (255, 255, 255))
-
-        play_icons = Image.open("play_icons.png")
-        play_icons = play_icons.resize((580, 62))
-        background.paste(play_icons, (text_x_position, 450), play_icons)
+            # LIVE indicator with pulsing effect
+            live_bar = Image.new('RGBA', (progress_width, progress_height + 20), (0, 0, 0, 0))
+            live_draw = ImageDraw.Draw(live_bar)
+            live_draw.rounded_rectangle(
+                [(0, 10), (progress_width, 10 + progress_height)],
+                radius=progress_height // 2,
+                fill=(255, 40, 40, 220)
+            )
+            live_bar = live_bar.filter(ImageFilter.GaussianBlur(1))
+            background.paste(live_bar, (progress_x, progress_y), live_bar)
+            
+            # Pulsing circle for LIVE
+            pulse_x = progress_x + progress_width - 20
+            pulse_y = progress_y + 13
+            for pulse in range(2, 0, -1):
+                pulse_radius = 8 + pulse * 4
+                draw.ellipse(
+                    [pulse_x - pulse_radius, pulse_y - pulse_radius,
+                     pulse_x + pulse_radius, pulse_y + pulse_radius],
+                    fill=(255, 40, 40, 100 - pulse * 30)
+                )
+        
+        # Time stamps
+        time_y = progress_y + 30
+        draw_text_with_shadow(
+            background, draw,
+            (progress_x, time_y),
+            "00:00",
+            time_font,
+            (200, 200, 240),
+            shadow_offset=(1, 1),
+            shadow_blur=2
+        )
+        
+        duration_display = "LIVE" if duration == "Live" else duration
+        duration_color = (255, 80, 80) if duration == "Live" else (200, 200, 240)
+        draw_text_with_shadow(
+            background, draw,
+            (progress_x + progress_width - 80, time_y),
+            duration_display,
+            time_font,
+            duration_color,
+            shadow_offset=(1, 1),
+            shadow_blur=2
+        )
+        
+        # Control icons (if play_icons exists)
+        try:
+            play_icons = Image.open("play_icons.png")
+            # Resize and adjust transparency
+            icon_width = min(520, text_area_width - 40)
+            play_icons = play_icons.resize((icon_width, int(62 * icon_width / 580)))
+            
+            # Add subtle glow to icons
+            icons_with_glow = Image.new('RGBA', play_icons.size, (0, 0, 0, 0))
+            icons_with_glow.paste(play_icons, (0, 0), play_icons)
+            
+            icons_position = (progress_x + (progress_width - icon_width) // 2, time_y + 50)
+            background.paste(icons_with_glow, icons_position, icons_with_glow)
+        except:
+            # If play_icons.png doesn't exist, create simple play button
+            play_y = time_y + 60
+            play_x = progress_x + progress_width // 2
+            
+            # Play button circle
+            draw.ellipse(
+                [play_x - 30, play_y - 30, play_x + 30, play_y + 30],
+                fill=(255, 255, 255, 200),
+                outline=primary_color + (255,),
+                width=3
+            )
+            
+            # Play triangle
+            draw.polygon(
+                [(play_x - 10, play_y - 15), (play_x - 10, play_y + 15), (play_x + 15, play_y)],
+                fill=primary_color + (255,)
+            )
 
         # Create output file with random ID
-        background_path = f"cache/{random_id}_{videoid}_v4.png"
-        background.save(background_path)
+        background = background.convert("RGB")
+        background_path = f"cache/{random_id}_{videoid}_premium.png"
+        background.save(background_path, quality=95, optimize=True)
         
         # Clean up all temporary files
         for temp_file in temp_files_to_delete:
