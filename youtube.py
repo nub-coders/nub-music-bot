@@ -385,6 +385,9 @@ async def get_video_details(video_id):
             "skip_playlist_after_errors": 1,
         }
 
+        if os.path.exists("cookies.txt"):
+            ydl_opts["cookiefile"] = "cookies.txt"
+
         def run_extraction():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 # Extract initial info using ytsearch
@@ -457,7 +460,7 @@ async def handle_youtube_ytdlp(argument):
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "cookiesfrombrowser": ("firefox",),
+            # "cookiesfrombrowser": ("firefox",),
             "format": "best",
 
             # Performance optimizations
@@ -476,6 +479,10 @@ async def handle_youtube_ytdlp(argument):
             # Skip unnecessary processing
             "skip_playlist_after_errors": 1,
         }
+
+        if os.path.exists("cookies.txt"):
+            ydl_opts["cookiefile"] = "cookies.txt"
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             if is_url:
                  info_dict = ydl.extract_info(argument, download=False)

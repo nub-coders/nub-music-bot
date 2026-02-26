@@ -94,6 +94,9 @@ async def get_stream_url(youtube_url):
         "skip_playlist_after_errors": 1,
     }
 
+    if os.path.exists("cookies.txt"):
+        ydl_opts["cookiefile"] = "cookies.txt"
+
     try:
         import yt_dlp
 
