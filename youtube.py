@@ -362,7 +362,6 @@ def get_video_details(video_id):
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "cookiesfrombrowser": ("firefox",),
             "format": "best",
 
             # Performance optimizations
@@ -451,7 +450,6 @@ async def handle_youtube_ytdlp(argument):
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "cookiesfrombrowser": ("firefox",),
             "format": "best",
 
             # Performance optimizations

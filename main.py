@@ -38,7 +38,7 @@ async def main():
     logger.info("Starting bot initialization...")
     
     # Check and update yt-dlp if needed
-    await check_and_update_ytdlp()
+    # await check_and_update_ytdlp()
     
     # Create and start the bot client
     try:
