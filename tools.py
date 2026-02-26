@@ -75,6 +75,7 @@ def get_stream_url(youtube_url):
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
+        "cookiesfrombrowser": ("firefox",),
 
         # Performance optimizations
         "extract_flat": False,  # We need full info

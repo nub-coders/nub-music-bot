@@ -22,7 +22,6 @@ aiofiles
 Pillow
 py-tgcalls
 cryptg
-#pyrotgfork
 #https://devgagan.in/wp-content/uploads/2024/06/ggnpyro.zip
 kurigram
 Telethon
@@ -59,7 +58,6 @@ psutil
 py-tgcalls
 pymediainfo
 pymongo
-pyrotgfork
 python-ffmpeg
 python-magic
 pytz
