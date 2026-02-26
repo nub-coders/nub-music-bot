@@ -2,53 +2,41 @@ import json
 import subprocess
 import requests
 import re
-from io import BytesIO
-from urllib.parse import parse_qs, urlparse
-
 import asyncio
 import math
 import os
+import sys
 import shlex
-from pyrogram.errors.exceptions import InviteHashExpired , ChannelPrivate 
-from typing import Tuple
+import time
+import gc
+import shutil
+import textwrap
+import datetime
+import magic
+import psutil
+
+from io import BytesIO
+from urllib.parse import parse_qs, urlparse
+from re import sub
+from typing import Tuple, Optional
+from functools import wraps
+
+from pyrogram import Client, filters, enums
+from pyrogram.errors.exceptions import InviteHashExpired, ChannelPrivate
+from pyrogram.errors import FloodWait, RPCError
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+
 from pytgcalls import idle, PyTgCalls
-from pytgcalls.types import AudioQuality
-from pytgcalls.types import MediaStream
-from pytgcalls.types import VideoQuality
+from pytgcalls.types import AudioQuality, MediaStream, VideoQuality, ChatUpdate, StreamEnded
+from pytgcalls.exceptions import NotInCallError, NoActiveGroupCall
+
 from PIL import Image
 from pymediainfo import MediaInfo
-from pyrogram.types import Message
-import time
-from pytgcalls.exceptions import NotInCallError
-from pytgcalls.types import ChatUpdate, StreamEnded
 
-
-
-from pytgcalls.exceptions import (
-    NoActiveGroupCall,
-)
-import os
-from asyncio import sleep
-import os
-import sys
-from re import sub
 from fonts import *
-from pyrogram import Client, filters, enums
-from pyrogram.types import Message
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-import time
-import asyncio
 from config import *
-from pyrogram import Client, filters
-import gc
-import time
 from youtube import handle_youtube, get_video_details, extract_video_id, format_number, format_duration, time_to_seconds
 from database import user_sessions, db_task, collection
-
-from pyrogram.errors import (
-    FloodWait,
-    RPCError,
-)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -128,7 +116,7 @@ def get_stream_url(youtube_url):
 
 
 temporary = {}
-active = []
+active = set()  # set for O(1) membership checks
 playing = {}
 queues = {}
 clients = {}
@@ -144,51 +132,43 @@ broadcast_message = {}
 SUDO = []
 AUTH = {}
 BLOCK = []
-import os
-import shutil
+
+# In-memory cache for admin.txt to avoid repeated disk reads
+_admin_ids_cache = None
+_admin_cache_mtime = 0.0
+
+def get_admin_ids(admin_file: str) -> list:
+    """Return cached admin IDs from admin.txt, refresh only when file changes."""
+    global _admin_ids_cache, _admin_cache_mtime
+    try:
+        mtime = os.path.getmtime(admin_file)
+        if _admin_ids_cache is None or mtime != _admin_cache_mtime:
+            with open(admin_file, "r") as f:
+                _admin_ids_cache = [int(line.strip()) for line in f if line.strip()]
+            _admin_cache_mtime = mtime
+        return _admin_ids_cache
+    except Exception:
+        return []
 
 def clear_directory(directory_path):
-    # Check if the directory exists
+    """Clear all files and subdirectories in the given directory."""
     if not os.path.exists(directory_path):
-        print(f"The directory {directory_path} does not exist.")
+        logger.warning(f"Directory {directory_path} does not exist.")
         return
-
-    # Check if the path is actually a directory
     if not os.path.isdir(directory_path):
-        print(f"{directory_path} is not a directory.")
+        logger.warning(f"{directory_path} is not a directory.")
         return
-
-    # List all files and directories in the given directory
     for item in os.listdir(directory_path):
         item_path = os.path.join(directory_path, item)
-
         try:
             if os.path.isfile(item_path) or os.path.islink(item_path):
-                # Remove file or symbolic link
                 os.unlink(item_path)
             elif os.path.isdir(item_path):
-                # Remove directory and all its contents
                 shutil.rmtree(item_path)
         except Exception as e:
-            print(f"Failed to delete {item_path}. Reason: {e}")
-
-    print(f"Directory {directory_path} has been cleared.")
-
-import asyncio
-
-from pyrogram import Client, filters
-from pyrogram import enums
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-
-import re
+            logger.warning(f"Failed to delete {item_path}: {e}")
 
 
-
-
-
-import datetime
-import os
-import magic
 
 def is_streamable(file_path):
     """
@@ -233,31 +213,6 @@ def is_streamable(file_path):
     except Exception:
         return False
 
-# Example usage
-import psutil
-import os
-async def get_readable_time(seconds: int) -> str:
-    count = 0
-    up_time = ""
-    time_list = []
-    time_suffix_list = ["s", "m", "h", "days"]
-
-    while count < 4:
-        count += 1
-        remainder, result = divmod(seconds, 60) if count < 3 else divmod(seconds, 24)
-        if seconds == 0 and remainder == 0:
-            break
-        time_list.append(int(result))
-        seconds = int(remainder)
-
-    for x in range(len(time_list)):
-        time_list[x] = str(time_list[x]) + time_suffix_list[x]
-    if len(time_list) == 4:
-        up_time += time_list.pop() + ", "
-
-    time_list.reverse()
-    up_time += ":".join(time_list)
-    return up_time
 def get_arg(message):
     msg = message.text
     msg = msg.replace(" ", "", 1) if msg[1] == " " else msg
@@ -269,19 +224,13 @@ def get_arg(message):
 
 
 async def is_active_chat(chat_id):
-    if chat_id not in active:
-        return False
-    else:
-        return True
+    return chat_id in active
 
 async def add_active_chat(chat_id):
-    if chat_id not in active:
-         active.append(chat_id)
-
+    active.add(chat_id)
 
 async def remove_active_chat(chat_id):
-    if chat_id in active:
-        active.remove(chat_id)
+    active.discard(chat_id)
     chat_dir = f"{ggg}/user_{clients['bot'].me.id}/{chat_id}"
     os.makedirs(chat_dir, exist_ok=True)
     clear_directory(chat_dir)
@@ -885,7 +834,7 @@ async def resize_media(media: str, video: bool, fast_forward: bool) -> str:
     return resized_photo
 
 
-import textwrap
+
 async def add_text_img(image_path, text):
     font_size = 12
     stroke_width = 1
@@ -1171,15 +1120,7 @@ def trim_title(title):
     return title
 
 
-from functools import wraps
-from typing import Tuple, Optional
-
-# Example usage:
-async def is_active_chat(chat_id):
-    if chat_id not in active:
-        return False
-    else:
-        return True
+# Aliases / helpers
 
 
 async def get_user_data(user_id, key):

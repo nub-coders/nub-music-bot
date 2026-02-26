@@ -104,15 +104,12 @@ def admin_only():
 
                 logger.debug("Performing admin check")
 
-                # Check admin status
-                is_admin = False
+                # Check admin status using cached admin IDs (avoids disk read on every command)
                 admin_file = f"{ggg}/admin.txt"
-                if os.path.exists(admin_file):
-                    with open(admin_file, "r") as file:
-                        admin_ids = [int(line.strip()) for line in file.readlines()]
-                        is_admin = user_id in admin_ids
-                        if is_admin:
-                            logger.debug(f"User {user_id} is in admin list")
+                admin_ids = get_admin_ids(admin_file)
+                is_admin = user_id in admin_ids
+                if is_admin:
+                    logger.debug(f"User {user_id} is in admin list")
 
                 # Check permissions using global variables
                 is_auth_user = False
@@ -216,20 +213,14 @@ async def queue_command(client, message):
     await message.reply_photo(photo=buf, caption="Current Queue")
 
 
-from functools import wraps
-from typing import Tuple, Optional
 
-# Example usage:
-async def is_active_chat(client,chat_id):
-    if chat_id not in active:
-        return False
-    else:
-        return True
+# Local helpers matching the (client, chat_id) pattern used throughout bots.py
+# is_active_chat / add_active_chat use the set 'active' imported from tools via *
+async def is_active_chat(client, chat_id):  # noqa: F811
+    return chat_id in active
 
-
-async def add_active_chat(client,chat_id):
-    if chat_id not in active:
-        active.append(chat_id)
+async def add_active_chat(client, chat_id):  # noqa: F811
+    active.add(chat_id)
 
 
 
@@ -237,12 +228,8 @@ async def add_active_chat(client,chat_id):
 async def active_chats(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-
-    is_admin = False
-    if os.path.exists(admin_file):
-        with open(admin_file, "r") as file:
-            admin_ids = [int(line.strip()) for line in file.readlines()]
-            is_admin = user_id in admin_ids
+    admin_ids = get_admin_ids(admin_file)
+    is_admin = user_id in admin_ids
 
     # Check permissions using global SUDO variable
     is_authorized = (
@@ -280,8 +267,7 @@ async def active_chats(client, message):
 
 
 async def remove_active_chat(client, chat_id):
-    if chat_id in active:
-        active.remove(chat_id)
+    active.discard(chat_id)
     chat_dir = f"{ggg}/user_{client.me.id}/{chat_id}"
     os.makedirs(chat_dir, exist_ok=True)
     clear_directory(chat_dir)
@@ -499,12 +485,9 @@ async def auth_user(client, message):
         if replied_message.from_user:
             replied_user_id = replied_message.from_user.id
 
-            # Check if replied user is admin
-            if os.path.exists(admin_file):
-                with open(admin_file, "r") as file:
-                    admin_ids = [int(line.strip()) for line in file.readlines()]
-                    if replied_user_id in admin_ids:
-                        return await message.reply(f"**Owner is already authorized everywhere.**")
+            # Check if replied user is admin (use cache)
+            if replied_user_id in get_admin_ids(admin_file):
+                return await message.reply(f"**Owner is already authorized everywhere.**")
 
             # Check if user can be authorized
             if (replied_user_id != message.chat.id and
@@ -565,12 +548,9 @@ async def unauth_user(client, message):
         if replied_message.from_user:
             replied_user_id = replied_message.from_user.id
 
-            # Check if replied user is admin
-            if os.path.exists(admin_file):
-                with open(admin_file, "r") as file:
-                    admin_ids = [int(line.strip()) for line in file.readlines()]
-                    if replied_user_id in admin_ids:
-                        return await message.reply(f"**You can't remove authorization from owner.**")
+            # Check if replied user is admin (use cache)
+            if replied_user_id in get_admin_ids(admin_file):
+                return await message.reply(f"**You can't remove authorization from owner.**")
 
             # Check if user can be unauthorized using global AUTH
             if replied_user_id in AUTH[str(chat_id)]:
@@ -613,12 +593,8 @@ async def unauth_user(client, message):
 async def block_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-
-    is_admin = False
-    if os.path.exists(admin_file):
-        with open(admin_file, "r") as file:
-            admin_ids = [int(line.strip()) for line in file.readlines()]
-            is_admin = user_id in admin_ids
+    admin_ids = get_admin_ids(admin_file)
+    is_admin = user_id in admin_ids
 
     # Check permissions using global SUDO variable
     is_authorized = (
@@ -637,11 +613,8 @@ async def block_user(client, message):
         if replied_message.from_user:
             replied_user_id = replied_message.from_user.id
             admin_file = f"{ggg}/admin.txt"
-            if os.path.exists(admin_file):
-               with open(admin_file, "r") as file:
-                 admin_ids = [int(line.strip()) for line in file.readlines()]
-                 if replied_user_id in admin_ids:
-                     return await message.reply(f"**MF\n\nYou can't block my owner.**")
+            if replied_user_id in get_admin_ids(admin_file):
+                return await message.reply(f"**MF\n\nYou can't block my owner.**")
             # Check if the replied user is the same as the current chat (group) id
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self and not OWNER_ID == replied_user_id:
                 if replied_user_id not in BLOCK:
@@ -684,13 +657,7 @@ async def block_user(client, message):
 async def reboot_handler(client: Client, message: Message):
     user_id = message.from_user.id
     admin_file = f"{ggg}/admin.txt"
-
-    # Admin file check
-    is_admin = False
-    if os.path.exists(admin_file):
-        with open(admin_file, "r") as file:
-            admin_ids = [int(line.strip()) for line in file.readlines()]
-            is_admin = user_id in admin_ids
+    is_admin = user_id in get_admin_ids(admin_file)
 
     # Authorization check using global SUDO variable
     is_authorized = (
@@ -710,12 +677,7 @@ async def reboot_handler(client: Client, message: Message):
 async def unblock_user(client, message):
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-
-    is_admin = False
-    if os.path.exists(admin_file):
-        with open(admin_file, "r") as file:
-            admin_ids = [int(line.strip()) for line in file.readlines()]
-            is_admin = user_id in admin_ids
+    is_admin = user_id in get_admin_ids(admin_file)
 
     # Check permissions using global SUDO variable
     is_authorized = (
@@ -767,14 +729,9 @@ async def unblock_user(client, message):
 
 @Client.on_message(filters.command("sudolist"))
 async def show_sudo_list(client, message):
-    # Check admin permissions
     admin_file = f"{ggg}/admin.txt"
     user_id = message.from_user.id
-    is_admin = False
-    if os.path.exists(admin_file):
-        with open(admin_file, "r") as file:
-            admin_ids = [int(line.strip()) for line in file.readlines()]
-            is_admin = user_id in admin_ids
+    is_admin = user_id in get_admin_ids(admin_file)
 
     # Check permissions
     is_authorized = is_admin or str(OWNER_ID) == str(user_id)
@@ -2077,7 +2034,7 @@ async def status(client, message):
 @Client.on_callback_query(filters.regex("^(end|cend)$"))
 @admin_only()
 async def button_end_handler(client: Client, callback_query: CallbackQuery):
-    # Check if user is banned using global BLOCK variable
+    # Use global BLOCK list (already loaded at startup) - no DB query needed
     if callback_query.from_user.id in BLOCK:
         await callback_query.answer("You do not have permission to end the session!", show_alert=True)
         return
@@ -2146,9 +2103,8 @@ async def end_handler_func(client, message):
          await message.delete()
   except:
          pass
-  user_data = await find_one(collection, {"bot_id": client.me.id})
-  busers = user_data.get('busers', [])
-  if message.from_user.id in busers:
+  # Use global BLOCK list (already loaded at startup) - no DB query needed
+  if message.from_user.id in BLOCK:
        return
   try:
    bot_username = client.me.username
@@ -2183,10 +2139,8 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 @Client.on_callback_query(filters.regex(r"^(skip|cskip)$"))
 @admin_only()
 async def button_skip_handler(client: Client, callback_query: CallbackQuery):
-    user_data = await find_one(collection, {"bot_id": client.me.id})
-    busers = user_data.get('busers', [])
-
-    if callback_query.from_user.id in busers:
+    # Use global BLOCK list (already loaded at startup) - no DB query needed
+    if callback_query.from_user.id in BLOCK:
         await callback_query.answer("You don't have permission to skip!", show_alert=True)
         return
 
@@ -2258,11 +2212,8 @@ async def loop_handler_func(client, message):
         await message.delete()
     except:
         pass
-
-    # Check if user is banned
-    user_data = await find_one(collection, {"bot_id": client.me.id})
-    busers = user_data.get('busers', [])
-    if message.from_user.id in busers:
+    # Use global BLOCK list (already loaded at startup) - no DB query needed
+    if message.from_user.id in BLOCK:
         return
 
     try:
@@ -2325,9 +2276,8 @@ async def skip_handler_func(client, message):
          await message.delete()
   except:
          pass
-  user_data = await find_one(collection, {"bot_id": client.me.id})
-  busers = user_data.get('busers', [])
-  if message.from_user.id in busers:
+  # Use global BLOCK list (already loaded at startup) - no DB query needed
+  if message.from_user.id in BLOCK:
        return
   try:
    bot_username = client.me.username
@@ -2362,10 +2312,8 @@ async def skip_handler_func(client, message):
 @Client.on_callback_query(filters.regex("^(resume|cresume)$"))
 @admin_only()
 async def button_resume_handler(client: Client, callback_query: CallbackQuery):
-    user_data = await find_one(collection, {"bot_id": client.me.id})
-    busers = user_data.get('busers', [])
-
-    if callback_query.from_user.id in busers:
+    # Use global BLOCK list (already loaded at startup) - no DB query needed
+    if callback_query.from_user.id in BLOCK:
         await callback_query.answer("You don't have permission to resume!", show_alert=True)
         return
 
@@ -2392,10 +2340,8 @@ async def button_resume_handler(client: Client, callback_query: CallbackQuery):
 @Client.on_callback_query(filters.regex("^(pause|cpause)$"))
 @admin_only()
 async def button_pause_handler(client: Client, callback_query: CallbackQuery):
-    user_data = await find_one(collection, {"bot_id": client.me.id})
-    busers = user_data.get('busers', [])
-
-    if callback_query.from_user.id in busers:
+    # Use global BLOCK list (already loaded at startup) - no DB query needed
+    if callback_query.from_user.id in BLOCK:
         await callback_query.answer("You don't have permission to pause!", show_alert=True)
         return
 
@@ -2420,9 +2366,8 @@ async def button_pause_handler(client: Client, callback_query: CallbackQuery):
 @Client.on_message(filters.command("resume"))
 @admin_only()
 async def resume_handler_func(client, message):
-  user_data = await find_one(collection, {"bot_id": client.me.id})
-  busers = user_data.get('busers', [])
-  if message.from_user.id in busers:
+  # Use global BLOCK list (already loaded at startup) - no DB query needed
+  if message.from_user.id in BLOCK:
        return
   try:
    bot_username = client.me.username
@@ -2437,9 +2382,8 @@ async def resume_handler_func(client, message):
 @Client.on_message(filters.command("pause"))
 @admin_only()
 async def pause_handler_func(client, message):
-  user_data = await find_one(collection, {"bot_id": client.me.id})
-  busers = user_data.get('busers', [])
-  if message.from_user.id in busers:
+  # Use global BLOCK list (already loaded at startup) - no DB query needed
+  if message.from_user.id in BLOCK:
        return
   try:
    bot_username = client.me.username
