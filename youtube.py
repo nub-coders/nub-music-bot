@@ -6,6 +6,7 @@ import os
 import re
 import json
 import time
+import asyncio
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 from yt_dlp import YoutubeDL
@@ -314,7 +315,7 @@ def extract_best_format(formats):
 
     return 'N/A'
 
-def get_video_details(video_id):
+async def get_video_details(video_id):
     """
     Get video details using API first, then yt_dlp fallback
 
@@ -324,12 +325,14 @@ def get_video_details(video_id):
     Returns:
         dict: Video details or error message
     """
+    loop = asyncio.get_event_loop()
     
     # First try API if token is available
     if API_TOKEN:
         try:
             logger.debug(f"[youtube.get_video_details] Using API for video_id='{video_id}'")
-            api_result = get_video_info(video_id)
+            # Run blocking API call in executor
+            api_result = await loop.run_in_executor(None, lambda: get_video_info(video_id))
             
             if api_result and api_result[0] and api_result[0] != "N/A":
                 title, video_id_result, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken = api_result
@@ -362,7 +365,7 @@ def get_video_details(video_id):
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "cookiesfrombrowser": ("firefox",),
+            # "cookiesfrombrowser": ("firefox",),
             "format": "best",
 
             # Performance optimizations
@@ -382,52 +385,55 @@ def get_video_details(video_id):
             "skip_playlist_after_errors": 1,
         }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Extract initial info using ytsearch
-            search_result = ydl.extract_info(f"ytsearch:{video_id}", download=False)
+        def run_extraction():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extract initial info using ytsearch
+                return ydl.extract_info(f"ytsearch:{video_id}", download=False)
 
-            if not search_result or 'entries' not in search_result or not search_result['entries']:
-                logger.warning("[youtube.get_video_details] No entries found in yt-dlp search")
-                return {'error': 'No video found for the given ID'}
+        search_result = await loop.run_in_executor(None, run_extraction)
 
-            # Get the first entry from search results
-            video_info = search_result['entries'][0]
+        if not search_result or 'entries' not in search_result or not search_result['entries']:
+            logger.warning("[youtube.get_video_details] No entries found in yt-dlp search")
+            return {'error': 'No video found for the given ID'}
 
-            # Create YouTube URL from video ID
-            youtube_url = f"https://www.youtube.com/watch?v={video_info.get('id', video_id)}"
+        # Get the first entry from search results
+        video_info = search_result['entries'][0]
 
-            # Process duration
-            duration = 'N/A'
-            if video_info.get('duration'):
-                try:
-                    duration_seconds = int(video_info.get('duration'))
-                    duration = format_duration(duration_seconds)
-                except (ValueError, TypeError):
-                    duration = 'N/A'
+        # Create YouTube URL from video ID
+        youtube_url = f"https://www.youtube.com/watch?v={video_info.get('id', video_id)}"
 
-            # Get thumbnail URL
-            thumbnail = 'N/A'
-            if video_info.get('thumbnails'):
-                thumbnail = video_info['thumbnails'][-1].get('url', 'N/A')
+        # Process duration
+        duration = 'N/A'
+        if video_info.get('duration'):
+            try:
+                duration_seconds = int(video_info.get('duration'))
+                duration = format_duration(duration_seconds)
+            except (ValueError, TypeError):
+                duration = 'N/A'
 
-            # Extract best format stream URL
-            stream_url = extract_best_format(video_info.get('formats', []))
+        # Get thumbnail URL
+        thumbnail = 'N/A'
+        if video_info.get('thumbnails'):
+            thumbnail = video_info['thumbnails'][-1].get('url', 'N/A')
 
-            # Prepare details dictionary
-            details = {
-                'title': video_info.get('title', 'N/A'),
-                'thumbnail': thumbnail,
-                'duration': duration,
-                'view_count': video_info.get('view_count', 'N/A'),
-                'channel_name': video_info.get('uploader', 'N/A'),
-                'video_url': youtube_url,
-                'platform': 'YouTube',
-                'stream_url': stream_url,
-                'video_id': video_info.get('id', video_id)
-            }
+        # Extract best format stream URL
+        stream_url = extract_best_format(video_info.get('formats', []))
 
-            logger.info(f"[youtube.get_video_details] yt-dlp details extracted for id='{details.get('video_id')}'")
-            return details
+        # Prepare details dictionary
+        details = {
+            'title': video_info.get('title', 'N/A'),
+            'thumbnail': thumbnail,
+            'duration': duration,
+            'view_count': video_info.get('view_count', 'N/A'),
+            'channel_name': video_info.get('uploader', 'N/A'),
+            'video_url': youtube_url,
+            'platform': 'YouTube',
+            'stream_url': stream_url,
+            'video_id': video_info.get('id', video_id)
+        }
+
+        logger.info(f"[youtube.get_video_details] yt-dlp details extracted for id='{details.get('video_id')}'")
+        return details
 
     except (yt_dlp.utils.ExtractorError, yt_dlp.utils.DownloadError) as youtube_error:
         logger.error(f"[youtube.get_video_details] YouTube extraction failed: {youtube_error}")
@@ -530,7 +536,7 @@ async def handle_youtube(argument):
     
     # Use get_video_details which handles API → yt-dlp fallback
     logger.debug(f"[youtube.handle_youtube] Handling argument='{argument}'")
-    details = get_video_details(argument)
+    details = await get_video_details(argument)
     
     if 'error' in details:
         logger.warning(f"[youtube.handle_youtube] Failed to get details: {details.get('error')}")

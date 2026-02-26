@@ -62,7 +62,7 @@ def extract_best_format_url(formats):
     return None
 
 
-def get_stream_url(youtube_url):
+async def get_stream_url(youtube_url):
     """Get direct stream URL from YouTube link using optimized yt-dlp extraction. Returns input as-is if not a YouTube URL."""
     
     # Check if it's a YouTube URL
@@ -75,7 +75,7 @@ def get_stream_url(youtube_url):
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
-        "cookiesfrombrowser": ("firefox",),
+        # "cookiesfrombrowser": ("firefox",),
 
         # Performance optimizations
         "extract_flat": False,  # We need full info
@@ -96,19 +96,24 @@ def get_stream_url(youtube_url):
 
     try:
         import yt_dlp
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            logger.info(f"📥 Extracting stream URL from YouTube: {youtube_url}")
-            info = ydl.extract_info(youtube_url, download=False)
-            
-            # Get direct stream URL using optimized extraction
-            stream_url = extract_best_format_url(info.get("formats", []))
-            
-            if stream_url:
-                logger.info(f"✅ Successfully extracted stream URL")
-            else:
-                logger.warning(f"⚠️ Could not extract stream URL")
-            
-            return stream_url
+
+        def run_extraction():
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                return ydl.extract_info(youtube_url, download=False)
+
+        logger.info(f"📥 Extracting stream URL from YouTube: {youtube_url}")
+        loop = asyncio.get_event_loop()
+        info = await loop.run_in_executor(None, run_extraction)
+
+        # Get direct stream URL using optimized extraction
+        stream_url = extract_best_format_url(info.get("formats", []))
+
+        if stream_url:
+            logger.info(f"✅ Successfully extracted stream URL")
+        else:
+            logger.warning(f"⚠️ Could not extract stream URL")
+
+        return stream_url
             
     except Exception as e:
         logger.error(f"❌ Error extracting stream URL: {e}")
@@ -929,7 +934,7 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}... (len={len(stream_url)})")
         elif youtube_link:
             logger.info(f"[join_call] Extracting stream URL from YouTube link: {youtube_link}")
-            stream_source = get_stream_url(youtube_link)
+            stream_source = await get_stream_url(youtube_link)
             if not stream_source:
                 logger.warning(f"[join_call] Failed to extract stream URL, falling back to youtube_link")
                 stream_source = youtube_link
