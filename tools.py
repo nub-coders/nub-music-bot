@@ -946,14 +946,14 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             return await remove_active_chat(chat_id)
 
         logger.info(f"[join_call] Attempting to play: {title} from {stream_source[:100]}... in chat {chat_id}")
-        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.STUDIO and VideoQuality.HD_720p; audio_flags={audio_flags}")
+        logger.debug(f"[join_call] Calling clients['call_py'].play with AudioQuality.MEDIUM and VideoQuality.HD_720p; audio_flags={audio_flags}")
 
         await clients["call_py"].play(
             chat_id,
             MediaStream(
                 stream_source,
-                AudioQuality.STUDIO,
-                VideoQuality.HD_720p,
+                AudioQuality.MEDIUM,
+                VideoQuality.SD_360p,
                 video_flags=audio_flags,
             ),
         )
