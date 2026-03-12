@@ -13,21 +13,21 @@ import yt_dlp
 import logging
 
 # API Configuration
-API_TOKEN = os.getenv('NUB_YTDLP_API')  # from environment variable
-BASE_URL = 'http://api.nubcoder.com'
+API_TOKEN = os.getenv('NUB_YTDLP_API', '')  # Use user token if env missing
+BASE_URL = 'https://api.nubcoder.com'
 
 logger = logging.getLogger(__name__)
 
-def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, int, str, str, int, str, str, str]:
+def get_video_info(url_or_query: str, max_results: int = 1, mode: str = "audio") -> Tuple[str, str, int, str, str, int, str, str, str]:
     """Get video info - returns (title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken)"""
     try:
         start_time = time.time()
         logger.debug(
-            f"[youtube.get_video_info] Requesting info for query='{url_or_query}' max_results={max_results}; token_set={bool(API_TOKEN)}"
+            f"[youtube.get_video_info] Requesting info for query='{url_or_query}' max_results={max_results} mode={mode}; token_set={bool(API_TOKEN)}"
         )
         response = requests.get(
             f'{BASE_URL}/info',
-            params={'token': API_TOKEN, 'q': url_or_query, 'max_results': max_results},
+            params={'token': API_TOKEN, 'q': url_or_query, 'max_results': max_results, 'mode': mode},
             timeout=30
         )
         response.raise_for_status()
@@ -42,11 +42,11 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
         return (
             data.get('title', 'N/A'),
             data.get('video_id', 'N/A'),
-            data.get('duration', 0),
-            data.get('youtube_link', 'N/A'),
-            data.get('channel_name', 'N/A'),
-            data.get('views', 0),
-            data.get('url', 'N/A'),
+            data.get('duration', '0'),
+            data.get('youtube_link', 'N/A') if data.get('youtube_link') else data.get('url', 'N/A'),
+            data.get('channel_name', 'N/A') if data.get('channel_name') else data.get('channel', 'N/A'),
+            data.get('views', '0'),
+            data.get('stream_url', 'N/A'),
             data.get('thumbnail', 'N/A'),
             data.get('time_taken', 'N/A')
         )
@@ -54,14 +54,14 @@ def get_video_info(url_or_query: str, max_results: int = 1) -> Tuple[str, str, i
         logger.error(f"[youtube.get_video_info] RequestException: {e}")
         return None, None, None, None, None, None, None, None, str(e)
 
-def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str, int, int, str, str]]:
+def search_videos(query: str, limit: int = 5, method: str = "scrape") -> List[Tuple[str, str, str, int, int, str, str]]:
     """Search videos - returns list of (title, video_id, channel_name, duration, views, thumbnail_url, youtube_link)"""
     try:
         start_time = time.time()
-        logger.debug(f"[youtube.search_videos] Searching query='{query}' max_results={max_results}")
+        logger.debug(f"[youtube.search_videos] Searching query='{query}' limit={limit} method={method}")
         response = requests.get(
             f'{BASE_URL}/search',
-            params={'q': query, 'max_results': max_results},
+            params={'q': query, 'limit': limit, 'method': method},
             timeout=30
         )
         response.raise_for_status()
@@ -78,17 +78,98 @@ def search_videos(query: str, max_results: int = 5) -> List[Tuple[str, str, str,
             results.append((
                 video.get('title', 'N/A'),
                 video.get('video_id', 'N/A'),
-                video.get('channel_name', 'N/A'),
-                video.get('duration', 0),
-                video.get('views', 0),
+                video.get('channel', 'N/A') if video.get('channel') else video.get('channel_name', 'N/A'),
+                video.get('duration', '0'),
+                video.get('views', '0'),
                 video.get('thumbnail', 'N/A'),
-                video.get('youtube_link', 'N/A')
+                video.get('url', 'N/A') if video.get('url') else video.get('youtube_link', 'N/A')
             ))
         logger.debug(f"[youtube.search_videos] Returning {len(results)} results")
         return results
     except requests.RequestException as e:
         logger.error(f"[youtube.search_videos] RequestException: {e}")
         return []
+
+def get_trending_songs(limit: int = 10) -> List[dict]:
+    """Get trending songs"""
+    try:
+        response = requests.get(f'{BASE_URL}/trending', params={'limit': limit}, timeout=30)
+        response.raise_for_status()
+        return response.json().get('results', [])
+    except Exception as e:
+        logger.error(f"[youtube.get_trending] Error: {e}")
+        return []
+
+def get_song_suggestions(query: str, limit: int = 5) -> List[str]:
+    """Get autocomplete suggestions"""
+    try:
+        response = requests.get(f'{BASE_URL}/suggest', params={'q': query, 'limit': limit}, timeout=10)
+        response.raise_for_status()
+        return response.json().get('results', [])
+    except Exception as e:
+        logger.error(f"[youtube.get_suggest] Error: {e}")
+        return []
+
+def get_stream_url_api(url_or_query: str, mode: str = "audio") -> str:
+    """Get stream URL from API"""
+    try:
+        response = requests.get(
+            f'{BASE_URL}/stream',
+            params={'q': url_or_query, 'mode': mode, 'token': API_TOKEN},
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        if mode == 'combined':
+            return data.get('video_url'), data.get('audio_url')
+        return data.get('stream_url', 'N/A')
+    except Exception as e:
+        logger.error(f"[youtube.get_stream] Error: {e}")
+        return None
+
+def get_video_stream_urls_api(url_or_query: str) -> Tuple[str, str]:
+    """Get separated best quality video and audio URLs"""
+    try:
+        response = requests.get(
+            f'{BASE_URL}/video-stream',
+            params={'q': url_or_query, 'token': API_TOKEN},
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get('video_url', 'N/A'), data.get('audio_url', 'N/A')
+    except Exception as e:
+        logger.error(f"[youtube.get_video_stream_urls] Error: {e}")
+        return None, None
+
+def get_playlist_songs_api(url: str) -> List[dict]:
+    """Get playlist songs"""
+    try:
+        response = requests.get(
+            f'{BASE_URL}/playlist',
+            params={'url': url, 'token': API_TOKEN},
+            timeout=60
+        )
+        response.raise_for_status()
+        return response.json().get('songs', [])
+    except Exception as e:
+        logger.error(f"[youtube.get_playlist] Error: {e}")
+        return []
+
+def get_library_version() -> dict:
+    """Get library version"""
+    try:
+        return requests.get(f'{BASE_URL}/version', timeout=10).json()
+    except Exception:
+        return {}
+
+def check_health() -> bool:
+    """Check server health"""
+    try:
+        return requests.get(f'{BASE_URL}/health', timeout=5).status_code == 200
+    except Exception:
+        return False
+
 
 def get_rate_limit_status() -> Tuple[int, int, int, bool, str]:
     """Get quota status - returns (daily_limit, requests_used, requests_remaining, is_admin, reset_time)"""
@@ -164,6 +245,7 @@ def format_number(num):
 
     # If input is a string, check if it's digits only
     if isinstance(num, str):
+        num = num.replace(',', '')
         if not num.isdigit():
             logger.debug(f"[youtube.format_number] Non-digit string input: {num}")
             return "N/A"
