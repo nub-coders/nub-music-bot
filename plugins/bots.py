@@ -99,7 +99,7 @@ def admin_only():
                     if isinstance(update, CallbackQuery):
                         await update.answer("⚠️ Cannot verify admin status from unknown user.", show_alert=True)
                     else:
-                        await update.reply("⚠️ Cannot verify admin status from unknown user.", reply_to_message_id=reply_id)
+                        await update.reply("⚠️ Cannot verify admin status from unknown user.", reply_to_message_id=reply_id, disable_web_page_preview=True)
                     return
 
                 logger.debug("Performing admin check")
@@ -152,7 +152,7 @@ def admin_only():
                     if isinstance(update, CallbackQuery):
                         await update.answer("⚠️ This action is restricted to admins only.", show_alert=True)
                     else:
-                        await update.reply("⚠️ This command is restricted to admins only.", reply_to_message_id=reply_id)
+                        await update.reply("⚠️ This command is restricted to admins only.", reply_to_message_id=reply_id, disable_web_page_preview=True)
                     return
 
                 logger.info(f"User {user_id} authorized for {func.__name__}")
@@ -164,7 +164,7 @@ def admin_only():
                 if isinstance(update, CallbackQuery):
                     await update.answer("⚠️ Authorization check failed.", show_alert=True)
                 else:
-                    await update.reply("⚠️ Authorization check failed.")
+                    await update.reply("⚠️ Authorization check failed.", disable_web_page_preview=True)
                 return
         return wrapper
     return decorator
@@ -184,7 +184,7 @@ async def queue_command(client, message):
     queue_list = queues.get(chat_id, [])
     items = queue_list[:20]
     if not items:
-        return await message.reply("Queue is empty.")
+        return await message.reply("Queue is empty.", disable_web_page_preview=True)
 
     # Prepare text for queue
     text_lines = [f"Queue for this chat (max 20):\n"]
@@ -239,7 +239,7 @@ async def active_chats(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     # Use PyTgCalls.calls to get active calls directly
     active_calls = await call_py.calls
@@ -263,7 +263,7 @@ async def active_chats(client, message):
     else:
         reply_text = "<b>Active Voice Chats:</b>\n<blockquote>No active group calls</blockquote>"
 
-    await message.reply_text(reply_text)
+    await message.reply_text(reply_text, disable_web_page_preview=True)
 
 
 async def remove_active_chat(client, chat_id):
@@ -299,9 +299,9 @@ async def mentionall(client, message):
         if usrnum == 5:
             if args:
                 txt = f"<blockquote>{args}\n\n{usrtxt}</blockquote>"
-                await client.send_message(chat_id, txt)
+                await client.send_message(chat_id, txt, disable_web_page_preview=True)
             elif direp:
-                await direp.reply(f"<blockquote>{usrtxt}</blockquote>")
+                await direp.reply(f"<blockquote>{usrtxt}</blockquote>", disable_web_page_preview=True)
             await asyncio.sleep(5)
             usrnum = 0
             usrtxt = ""
@@ -328,8 +328,8 @@ async def seek_handler_func(client, message):
         if len(command_parts) != 2:
             await client.send_message(
                 message.chat.id,
-                "❌ Please specify the seek time in seconds.\nUsage: /seek (seconds)"
-            )
+                "❌ Please specify the seek time in seconds.\nUsage: /seek (seconds)", 
+            disable_web_page_preview=True)
             return
 
         try:
@@ -337,14 +337,14 @@ async def seek_handler_func(client, message):
             if seek_value < 0:
                 await client.send_message(
                     message.chat.id,
-                    f"{upper_mono('❌ Seek time cannot be negative!')}"
-                )
+                    f"{upper_mono('❌ Seek time cannot be negative!')}", 
+                disable_web_page_preview=True)
                 return
         except ValueError:
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono('❌ Please provide a valid number of seconds!')}"
-            )
+                f"{upper_mono('❌ Please provide a valid number of seconds!')}", 
+            disable_web_page_preview=True)
             return
 
         # Check if there's a song playing
@@ -364,8 +364,8 @@ async def seek_handler_func(client, message):
             if message.chat.id not in played:
                 await client.send_message(
                     message.chat.id,
-                    f"{upper_mono('Assistant is not streaming anything!')}"
-                )
+                    f"{upper_mono('Assistant is not streaming anything!')}", 
+                disable_web_page_preview=True)
                 return
 
             played_in_seconds = int(time.time() - played[message.chat.id])
@@ -378,8 +378,8 @@ async def seek_handler_func(client, message):
                 if seek_value > remaining_duration:
                     await client.send_message(
                         message.chat.id,
-                        f"{upper_mono('❌ Cannot seek beyond the remaining duration!')}"
-                    )
+                        f"{upper_mono('❌ Cannot seek beyond the remaining duration!')}", 
+                    disable_web_page_preview=True)
                     return
                 total_seek = seek_value + played_in_seconds
             else:  # seekback
@@ -387,8 +387,8 @@ async def seek_handler_func(client, message):
                 if seek_value > played_in_seconds:
                     await client.send_message(
                         message.chat.id,
-                        f"{upper_mono('❌ Cannot seek back more than the played duration!')}"
-                    )
+                        f"{upper_mono('❌ Cannot seek back more than the played duration!')}", 
+                    disable_web_page_preview=True)
                     return
                 total_seek = played_in_seconds - seek_value
 
@@ -424,31 +424,31 @@ async def seek_handler_func(client, message):
 
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono('Seeked to {to_seek}!')}\n\nʙʏ: {message.from_user.mention()}"
-            )
+                f"{upper_mono('Seeked to {to_seek}!')}\n\nʙʏ: {message.from_user.mention()}", 
+            disable_web_page_preview=True)
         else:
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono('Assistant is not streaming anything!')}"
-            )
+                f"{upper_mono('Assistant is not streaming anything!')}", 
+            disable_web_page_preview=True)
     except Exception as e:
         await client.send_message(
             message.chat.id,
-            f"{upper_mono('❌ An error occurred:')} {str(e)}"
-        )
+            f"{upper_mono('❌ An error occurred:')} {str(e)}", 
+        disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("cancel") & filters.group)
 @admin_only()
 async def cancel_spam(client, message):
     if not message.chat.id in spam_chats:
-        return await message.reply("**Looks like there is no tagall here.**")
+        return await message.reply("**Looks like there is no tagall here.**", disable_web_page_preview=True)
     else:
         try:
             spam_chats.remove(message.chat.id)
         except:
             pass
-        return await message.reply("**Dismissing Mention.**")
+        return await message.reply("**Dismissing Mention.**", disable_web_page_preview=True)
 
 @Client.on_message(filters.command("del") & filters.group)
 @admin_only()
@@ -463,9 +463,9 @@ async def delete_message_handler(client, message):
         except MessageDeleteForbidden:
               pass
         except Exception as e:
-            await message.reply(f"Error deleting message: {str(e)}")
+            await message.reply(f"Error deleting message: {str(e)}", disable_web_page_preview=True)
     else:
-        await message.reply("**Please reply to a message to delete it.**")
+        await message.reply("**Please reply to a message to delete it.**", disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("auth") & filters.group)
@@ -487,7 +487,7 @@ async def auth_user(client, message):
 
             # Check if replied user is admin (use cache)
             if replied_user_id in get_admin_ids(admin_file):
-                return await message.reply(f"**Owner is already authorized everywhere.**")
+                return await message.reply(f"**Owner is already authorized everywhere.**", disable_web_page_preview=True)
 
             # Check if user can be authorized
             if (replied_user_id != message.chat.id and
@@ -503,13 +503,13 @@ async def auth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     ))
-                    await message.reply(f"User {replied_user_id} has been authorized in this chat.")
+                    await message.reply(f"User {replied_user_id} has been authorized in this chat.", disable_web_page_preview=True)
                 else:
-                    await message.reply(f"User {replied_user_id} is already authorized in this chat.")
+                    await message.reply(f"User {replied_user_id} is already authorized in this chat.", disable_web_page_preview=True)
             else:
-                await message.reply("You cannot authorize yourself or an anonymous user.")
+                await message.reply("You cannot authorize yourself or an anonymous user.", disable_web_page_preview=True)
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply("The replied message is not from a user.", disable_web_page_preview=True)
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -525,13 +525,13 @@ async def auth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     ))
-                    await message.reply(f"User {user_id_to_auth} has been authorized in this chat.")
+                    await message.reply(f"User {user_id_to_auth} has been authorized in this chat.", disable_web_page_preview=True)
                 else:
-                    await message.reply(f"User {user_id_to_auth} is already authorized in this chat.")
+                    await message.reply(f"User {user_id_to_auth} is already authorized in this chat.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 @Client.on_message(filters.command("unauth") & filters.group)
 @admin_only()
@@ -550,7 +550,7 @@ async def unauth_user(client, message):
 
             # Check if replied user is admin (use cache)
             if replied_user_id in get_admin_ids(admin_file):
-                return await message.reply(f"**You can't remove authorization from owner.**")
+                return await message.reply(f"**You can't remove authorization from owner.**", disable_web_page_preview=True)
 
             # Check if user can be unauthorized using global AUTH
             if replied_user_id in AUTH[str(chat_id)]:
@@ -561,11 +561,11 @@ async def unauth_user(client, message):
                     {"$set": {'auth_users': AUTH}},
                     upsert=True
                 ))
-                await message.reply(f"User {replied_user_id} has been removed from authorized users in this chat.")
+                await message.reply(f"User {replied_user_id} has been removed from authorized users in this chat.", disable_web_page_preview=True)
             else:
-                await message.reply(f"User {replied_user_id} is not authorized in this chat.")
+                await message.reply(f"User {replied_user_id} is not authorized in this chat.", disable_web_page_preview=True)
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply("The replied message is not from a user.", disable_web_page_preview=True)
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -581,13 +581,13 @@ async def unauth_user(client, message):
                         {"$set": {'auth_users': AUTH}},
                         upsert=True
                     ))
-                    await message.reply(f"User {user_id_to_unauth} has been removed from authorized users in this chat.")
+                    await message.reply(f"User {user_id_to_unauth} has been removed from authorized users in this chat.", disable_web_page_preview=True)
                 else:
-                    await message.reply(f"User {user_id_to_unauth} is not authorized in this chat.")
+                    await message.reply(f"User {user_id_to_unauth} is not authorized in this chat.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 @Client.on_message(filters.command("block"))
 async def block_user(client, message):
@@ -604,7 +604,7 @@ async def block_user(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     # Check if the message is a reply
     if message.reply_to_message:
@@ -614,7 +614,7 @@ async def block_user(client, message):
             replied_user_id = replied_message.from_user.id
             admin_file = f"{ggg}/admin.txt"
             if replied_user_id in get_admin_ids(admin_file):
-                return await message.reply(f"**MF\n\nYou can't block my owner.**")
+                return await message.reply(f"**MF\n\nYou can't block my owner.**", disable_web_page_preview=True)
             # Check if the replied user is the same as the current chat (group) id
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self and not OWNER_ID == replied_user_id:
                 if replied_user_id not in BLOCK:
@@ -623,14 +623,14 @@ async def block_user(client, message):
                     db_task(collection.update_one({"bot_id": client.me.id},
                                         {"$push": {'busers': replied_user_id}},
                                         upsert=True))
-                    await message.reply(f"User {replied_user_id} has been added to blocklist.")
+                    await message.reply(f"User {replied_user_id} has been added to blocklist.", disable_web_page_preview=True)
                 else:
-                   return await message.reply(f"User {replied_user_id} already in the blocklist.")
+                   return await message.reply(f"User {replied_user_id} already in the blocklist.", disable_web_page_preview=True)
 
             else:
-                await message.reply("You cannot block yourself or a anonymous user")
+                await message.reply("You cannot block yourself or a anonymous user", disable_web_page_preview=True)
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply("The replied message is not from a user.", disable_web_page_preview=True)
     else:
         # If not a reply, check if a user ID is provided in the command
         command_parts = message.text.split()
@@ -645,13 +645,13 @@ async def block_user(client, message):
                                         {"$push": {'busers': user_id_to_block}},
                                         upsert=True
                                     ))
-                    await message.reply(f"User {user_id_to_block} has been added to blocklist.")
+                    await message.reply(f"User {user_id_to_block} has been added to blocklist.", disable_web_page_preview=True)
                 else:
-                   return await message.reply(f"User {user_id_to_block} already in the blocklist.")
+                   return await message.reply(f"User {user_id_to_block} already in the blocklist.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 @Client.on_message(filters.command("reboot") & filters.private)
 async def reboot_handler(client: Client, message: Message):
@@ -667,10 +667,10 @@ async def reboot_handler(client: Client, message: Message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     # Authorized: Reboot process
-    await message.reply("**Admin command received. Rebooting...**")
+    await message.reply("**Admin command received. Rebooting...**", disable_web_page_preview=True)
     os.system(f"kill -9 {os.getpid()}")  # Hard kill (optional after client.stop())
 
 @Client.on_message(filters.command("unblock"))
@@ -687,7 +687,7 @@ async def unblock_user(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     if message.reply_to_message:
         replied_message = message.reply_to_message
@@ -700,9 +700,9 @@ async def unblock_user(client, message):
             db_task(collection.update_one({"bot_id": client.me.id},
                                 {"$pull": {'busers': replied_user_id}},
                                 upsert=True))
-            await message.reply(f"User {replied_user_id} has been removed from blocklist.")
+            await message.reply(f"User {replied_user_id} has been removed from blocklist.", disable_web_page_preview=True)
         else:
-            return await message.reply(f"User {replied_user_id} not in the blocklist.")
+            return await message.reply(f"User {replied_user_id} not in the blocklist.", disable_web_page_preview=True)
 
     else:
         # If not a reply, check if a user ID is provided in the command
@@ -718,13 +718,13 @@ async def unblock_user(client, message):
                     db_task(collection.update_one({"bot_id": client.me.id},
                                         {"$pull": {'busers': target_user_id}},
                                         upsert=True))
-                    await message.reply(f"User {target_user_id} has been removed from blocklist.")
+                    await message.reply(f"User {target_user_id} has been removed from blocklist.", disable_web_page_preview=True)
                 else:
-                    return await message.reply(f"User {target_user_id} not in the blocklist.")
+                    return await message.reply(f"User {target_user_id} not in the blocklist.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("sudolist"))
@@ -737,14 +737,14 @@ async def show_sudo_list(client, message):
     is_authorized = is_admin or str(OWNER_ID) == str(user_id)
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS PAID OWNER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS PAID OWNER'S COMMAND...**", disable_web_page_preview=True)
     try:
         # Get all users who have SUDOERS field
         users_data = await find_one(user_sessions, {"bot_id": client.me.id})
         sudo_users = users_data.get("SUDOERS", []) if users_data else []
 
         if not sudo_users:
-            return await message.reply("No sudo users found in the database.")
+            return await message.reply("No sudo users found in the database.", disable_web_page_preview=True)
 
         # Build the sudo list message
         sudo_list = ["**🔱 SUDO USERS LIST:**\n"]
@@ -765,10 +765,10 @@ async def show_sudo_list(client, message):
         sudo_list.append(f"\n**Total SUDO Users:** `{number-1}`")
 
         # Send the message
-        await message.reply("\n".join(sudo_list))
+        await message.reply("\n".join(sudo_list), disable_web_page_preview=True)
 
     except Exception as e:
-        await message.reply(f"An error occurred while fetching sudo list: {str(e)}")
+        await message.reply(f"An error occurred while fetching sudo list: {str(e)}", disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("addsudo"))
@@ -786,7 +786,7 @@ async def add_to_sudo(client, message):
     is_authorized = is_admin or str(OWNER_ID) == str(user_id)
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER'S COMMAND...**", disable_web_page_preview=True)
 
     if message.reply_to_message:
         replied_message = message.reply_to_message
@@ -798,7 +798,7 @@ async def add_to_sudo(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"**This user is already an owner!**")
+                        return await message.reply(f"**This user is already an owner!**", disable_web_page_preview=True)
 
             # Check if trying to add self or bot
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self:
@@ -807,14 +807,14 @@ async def add_to_sudo(client, message):
                 sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if replied_user_id not in sudoers:
                     asyncio.create_task(push_to_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", replied_user_id, upsert=True))
-                    await message.reply(f"User {replied_user_id} has been added to sudoers list.")
+                    await message.reply(f"User {replied_user_id} has been added to sudoers list.", disable_web_page_preview=True)
                     SUDO.append(replied_user_id)
                 else:
-                    await message.reply(f"User {replied_user_id} is already in sudoers list.")
+                    await message.reply(f"User {replied_user_id} is already in sudoers list.", disable_web_page_preview=True)
             else:
-                await message.reply("You cannot add yourself or the bot to sudoers.")
+                await message.reply("You cannot add yourself or the bot to sudoers.", disable_web_page_preview=True)
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply("The replied message is not from a user.", disable_web_page_preview=True)
     else:
         # Handle command with user ID
         command_parts = message.text.split()
@@ -827,21 +827,21 @@ async def add_to_sudo(client, message):
                     with open(admin_file, "r") as file:
                         admin_ids = [int(line.strip()) for line in file.readlines()]
                         if target_user_id in admin_ids:
-                            return await message.reply(f"**This user is already an owner!**")
+                            return await message.reply(f"**This user is already an owner!**", disable_web_page_preview=True)
 
                 # Get current sudo users
                 users_data = await find_one(user_sessions, {"bot_id": client.me.id})
                 sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if target_user_id not in sudoers:
                     asyncio.create_task(push_to_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", target_user_id, upsert=True))
-                    await message.reply(f"User {target_user_id} has been added to sudoers list.")
+                    await message.reply(f"User {target_user_id} has been added to sudoers list.", disable_web_page_preview=True)
                     SUDO.append(target_user_id)
                 else:
-                    await message.reply(f"User {target_user_id} is already in sudoers list.")
+                    await message.reply(f"User {target_user_id} is already in sudoers list.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 @Client.on_message(filters.command("rmsudo"))
 async def remove_from_sudo(client, message):
@@ -859,7 +859,7 @@ async def remove_from_sudo(client, message):
     is_authorized = is_admin or (user_id == OWNER_ID)
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER'S COMMAND...**", disable_web_page_preview=True)
 
     # Handle reply to message
     if message.reply_to_message:
@@ -872,25 +872,25 @@ async def remove_from_sudo(client, message):
                 with open(admin_file, "r") as file:
                     admin_ids = [int(line.strip()) for line in file.readlines()]
                     if replied_user_id in admin_ids:
-                        return await message.reply(f"**Cannot remove an owner from sudo list!**")
+                        return await message.reply(f"**Cannot remove an owner from sudo list!**", disable_web_page_preview=True)
 
             # Check if trying to remove self or bot
             if replied_user_id != message.chat.id and not replied_message.from_user.is_self:
                 # Get current sudo users
                 users_data = await find_one(user_sessions, {"bot_id": client.me.id})
                 if not users_data:
-                    return await message.reply(f"User {replied_user_id} is not in the database.")
+                    return await message.reply(f"User {replied_user_id} is not in the database.", disable_web_page_preview=True)
                 sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if replied_user_id in sudoers:
                     asyncio.create_task(pull_from_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", replied_user_id))
-                    await message.reply(f"User {replied_user_id} has been removed from sudoers list.")
+                    await message.reply(f"User {replied_user_id} has been removed from sudoers list.", disable_web_page_preview=True)
                     SUDO.remove(replied_user_id)
                 else:
-                    await message.reply(f"User {replied_user_id} is not in sudoers list.")
+                    await message.reply(f"User {replied_user_id} is not in sudoers list.", disable_web_page_preview=True)
             else:
-                await message.reply("You cannot remove yourself or the bot from sudoers.")
+                await message.reply("You cannot remove yourself or the bot from sudoers.", disable_web_page_preview=True)
         else:
-            await message.reply("The replied message is not from a user.")
+            await message.reply("The replied message is not from a user.", disable_web_page_preview=True)
     else:
         # Handle command with user ID
         command_parts = message.text.split()
@@ -903,23 +903,23 @@ async def remove_from_sudo(client, message):
                     with open(admin_file, "r") as file:
                         admin_ids = [int(line.strip()) for line in file.readlines()]
                         if target_user_id in admin_ids:
-                            return await message.reply(f"**Cannot remove an owner from sudo list!**")
+                            return await message.reply(f"**Cannot remove an owner from sudo list!**", disable_web_page_preview=True)
 
                 # Get current sudo users
                 users_data = await find_one(user_sessions, {"bot_id": client.me.id})
                 if not users_data:
-                    return await message.reply(f"User {target_user_id} is not in the database.")
+                    return await message.reply(f"User {target_user_id} is not in the database.", disable_web_page_preview=True)
                 sudoers = users_data.get("SUDOERS", []) if users_data else []
                 if target_user_id in sudoers:
                     asyncio.create_task(pull_from_array(user_sessions, {"bot_id": client.me.id}, "SUDOERS", target_user_id))
-                    await message.reply(f"User {target_user_id} has been removed from sudoers list.")
+                    await message.reply(f"User {target_user_id} has been removed from sudoers list.", disable_web_page_preview=True)
                     SUDO.remove(target_user_id)
                 else:
-                    await message.reply(f"User {target_user_id} is not in sudoers list.")
+                    await message.reply(f"User {target_user_id} is not in sudoers list.", disable_web_page_preview=True)
             except ValueError:
-                await message.reply("Please provide a valid user ID.")
+                await message.reply("Please provide a valid user ID.", disable_web_page_preview=True)
         else:
-            await message.reply("You need to reply to a message or provide a user ID.")
+            await message.reply("You need to reply to a message or provide a user ID.", disable_web_page_preview=True)
 
 
 
@@ -1010,7 +1010,7 @@ async def user_client_start_handler(client, message):
     command_args = message.text.split() if message.text else "hh".split()
     if len(command_args) > 1 and '_' in command_args[1]:
         try:
-            loading = await message.reply("Getting stream info! Please wait...")
+            loading = await message.reply("Getting stream info! Please wait...", disable_web_page_preview=True)
             # Split the argument using underscore and get the video ID
             _, video_id = command_args[1].split('_', 1)
 
@@ -1051,26 +1051,26 @@ async def user_client_start_handler(client, message):
                     return await message.reply_text(
                         f"❌ Failed to send photo: {str(e)}\n\n{caption}",
                         reply_markup=keyboard,
-                        reply_to_message_id=message.id
-                    )
+                        reply_to_message_id=message.id, 
+                    disable_web_page_preview=True)
             else:
                 return await message.reply_text(
                     f"❌ Error: {video_info}",
-                    reply_to_message_id=message.id
-                )
+                    reply_to_message_id=message.id, 
+                disable_web_page_preview=True)
 
         except Exception as e:
             return await message.reply_text(
                 f"❌ Error processing video ID: {str(e)}",
-                reply_to_message_id=message.id
-            )
+                reply_to_message_id=message.id, 
+            disable_web_page_preview=True)
 
     # Handle logging
 
     session_name = f'user_{client.me.id}'
     user_dir = f"{ggg}/{session_name}"
     os.makedirs(user_dir, exist_ok=True)
-    editing = await message.reply("⚡")
+    editing = await message.reply("⚡", disable_web_page_preview=True)
     owner = await client.get_users(OWNER_ID)
     ow_id = owner.id if owner.username else None
 
@@ -1364,7 +1364,7 @@ async def blocklist_handler(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     # Check for admin or owner
 
@@ -1372,14 +1372,14 @@ async def blocklist_handler(client, message):
     # Fetch blocklist from the database
     user_data = await find_one(collection, {"bot_id": client.me.id})
     if not user_data:
-        return await message.reply("No blocklist found.")
+        return await message.reply("No blocklist found.", disable_web_page_preview=True)
 
     blocked_users = user_data.get('busers', [])
     if not blocked_users:
-        return await message.reply("No users are currently blocked.")
+        return await message.reply("No users are currently blocked.", disable_web_page_preview=True)
 
     blocklist_text = "Blocked Users:\n" + "\n".join([f"- `{user_id}`" for user_id in blocked_users])
-    await message.reply_text(blocklist_text)
+    await message.reply_text(blocklist_text, disable_web_page_preview=True)
 
 
 from pytgcalls import filters as call_filters
@@ -1563,7 +1563,7 @@ async def play_handler_func(client, message):
 
     # Check if the command is sent in a group
     if message.chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await message.reply("The play commands can only be used in group chats.")
+        await message.reply("The play commands can only be used in group chats.", disable_web_page_preview=True)
         return
 
     # Get the bot username and retrieve the session client ID from connector
@@ -1580,14 +1580,14 @@ async def play_handler_func(client, message):
     if channel_mode:
         linked_chat = (await client.get_chat(message.chat.id)).linked_chat
         if not linked_chat:
-            await message.reply("This group doesn't have a linked channel.")
+            await message.reply("This group doesn't have a linked channel.", disable_web_page_preview=True)
             return
         target_chat_id = linked_chat.id
 
     # Check queue for the target chat
     current_queue = len(queues.get(target_chat_id, [])) if queues else 0
 
-    massage = await message.reply("⚡")
+    massage = await message.reply("⚡", disable_web_page_preview=True)
 
     # Set target chat as active based on channel mode or not
     is_active = await is_active_chat(client, target_chat_id)
@@ -1953,7 +1953,7 @@ async def get_chat_type(client, chat_id):
 
 async def status(client, message):
     """Handles the /status command with song statistics"""
-    Man = await message.reply_text("Collecting stats...")
+    Man = await message.reply_text("Collecting stats...", disable_web_page_preview=True)
     start = datetime.datetime.now()
     u = g = sg = c = a_chat = play_count = 0
     user_data = await find_one(collection, {"bot_id": client.me.id})
@@ -2061,8 +2061,8 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
                 logger.warning(f"Error leaving call: {e}")
             
             await callback_query.message.reply(
-                f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}"
-            )
+                f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}", 
+            disable_web_page_preview=True)
             try:
                 await callback_query.message.delete()
             except Exception as e:
@@ -2080,8 +2080,8 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
                 logger.warning(f"Error leaving call: {e}")
             
             await callback_query.message.reply(
-                f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
-            )
+                f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+            disable_web_page_preview=True)
             if chat_id in playing:
                 playing[chat_id].clear()
             
@@ -2113,19 +2113,19 @@ async def end_handler_func(client, message):
        await remove_active_chat(client, message.chat.id)
        queues[message.chat.id].clear()
        await client.send_message(message.chat.id,
-f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}"
-            )
+f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}", 
+            disable_web_page_preview=True)
        await call_py.leave_call(message.chat.id)
        playing[message.chat.id].clear()
    else:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
-)
+     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+disable_web_page_preview=True)
      await remove_active_chat(client, message.chat.id)
      await call_py.leave_call(message.chat.id)
      playing[message.chat.id].clear()
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
-)
+     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+disable_web_page_preview=True)
      playing[message.chat.id].clear()
 
 
@@ -2156,7 +2156,7 @@ async def button_skip_handler(client: Client, callback_query: CallbackQuery):
         if chat_id in queues and len(queues[chat_id]) > 0:
             # There's a next song in queue
             next_song = queues[chat_id].pop(0)
-            await callback_query.message.reply(f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {callback_query.from_user.mention()}")
+            await callback_query.message.reply(f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {callback_query.from_user.mention()}", disable_web_page_preview=True)
             
             try:
                 await clients['call_py'].pause(chat_id)
@@ -2187,7 +2187,7 @@ async def button_skip_handler(client: Client, callback_query: CallbackQuery):
             if chat_id in playing:
                 playing[chat_id].clear()
             
-            await callback_query.message.reply(f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}")
+            await callback_query.message.reply(f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}", disable_web_page_preview=True)
             
             try:
                 await callback_query.message.delete()
@@ -2222,8 +2222,8 @@ async def loop_handler_func(client, message):
         if len(command_parts) != 2:
             await client.send_message(
                 message.chat.id,
-                "❌ Please specify the number of loops.\nUsage: /loop <number>"
-            )
+                "❌ Please specify the number of loops.\nUsage: /loop <number>", 
+            disable_web_page_preview=True)
             return
 
         try:
@@ -2231,14 +2231,14 @@ async def loop_handler_func(client, message):
             if loop_count <= 0 or loop_count > 20:
                 await client.send_message(
                     message.chat.id,
-                    "❌ Loop count must be from 0-20!"
-                )
+                    "❌ Loop count must be from 0-20!", 
+                disable_web_page_preview=True)
                 return
         except ValueError:
             await client.send_message(
                 message.chat.id,
-                "❌ Please provide a valid number for loops!"
-            )
+                "❌ Please provide a valid number for loops!", 
+            disable_web_page_preview=True)
             return
 
         # Check if there's a song playing
@@ -2255,19 +2255,19 @@ async def loop_handler_func(client, message):
 
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono('Current song will be repeated {loop_count} times!')}\n\nʙʏ: {message.from_user.mention()}"
-            )
+                f"{upper_mono('Current song will be repeated {loop_count} times!')}\n\nʙʏ: {message.from_user.mention()}", 
+            disable_web_page_preview=True)
         else:
             await client.send_message(
                 message.chat.id,
-                f"{upper_mono('Assistant is not streaming anything!')}"
-            )
+                f"{upper_mono('Assistant is not streaming anything!')}", 
+            disable_web_page_preview=True)
 
     except Exception as e:
         await client.send_message(
             message.chat.id,
-            f"❌ An error occurred: {str(e)}"
-        )
+            f"❌ An error occurred: {str(e)}", 
+        disable_web_page_preview=True)
 
 @Client.on_message(filters.command("skip"))
 @admin_only()
@@ -2284,7 +2284,7 @@ async def skip_handler_func(client, message):
    if message.chat.id in queues:
     if len(queues[message.chat.id]) >0:
        next = queues[message.chat.id].pop(0)
-       await client.send_message(message.chat.id, f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {message.from_user.mention()}")
+       await client.send_message(message.chat.id, f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id] = next
        try:
           await call_py.pause(message.chat.id)
@@ -2294,17 +2294,17 @@ async def skip_handler_func(client, message):
     else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
-       await client.send_message(message.chat.id, f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}")
+       await client.send_message(message.chat.id, f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id].clear()
    else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
        await client.send_message(message.chat.id,
-              f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}")
+              f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id].clear()
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!"
-)
+     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+disable_web_page_preview=True)
      playing[message.chat.id].clear()
 
 
@@ -2329,8 +2329,8 @@ async def button_resume_handler(client: Client, callback_query: CallbackQuery):
         if await is_active_chat(client, chat_id):
             await call_py.resume(chat_id)
             await callback_query.message.reply(
-                f"Song resumed. Use the Pause button to pause again.\n\nʙʏ: {callback_query.from_user.mention()}"
-            )
+                f"Song resumed. Use the Pause button to pause again.\n\nʙʏ: {callback_query.from_user.mention()}", 
+            disable_web_page_preview=True)
         else:
             await callback_query.answer("Assistant is not streaming anything!")
     except NotInCallError:
@@ -2356,8 +2356,8 @@ async def button_pause_handler(client: Client, callback_query: CallbackQuery):
         if await is_active_chat(client, chat_id):
             await call_py.pause(chat_id)
             await callback_query.message.reply(
-                f"Song paused. Use the Resume button to continue.\n\nʙʏ: {callback_query.from_user.mention()}"
-            )
+                f"Song paused. Use the Resume button to continue.\n\nʙʏ: {callback_query.from_user.mention()}", 
+            disable_web_page_preview=True)
         else:
             await callback_query.answer("Assistant is not streaming anything!")
     except NotInCallError:
@@ -2373,10 +2373,10 @@ async def resume_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.resume(message.chat.id)
-       await client.send_message(message.chat.id, f"▶️ 𝗥𝗘𝗦𝗨𝗠𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗽𝗮𝘂𝘀𝗲 𝘁𝗼 𝘀𝘁𝗼𝗽\n┗ 👤 {message.from_user.mention()}")
-   else: await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
+       await client.send_message(message.chat.id, f"▶️ 𝗥𝗘𝗦𝗨𝗠𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗽𝗮𝘂𝘀𝗲 𝘁𝗼 𝘀𝘁𝗼𝗽\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
+   else: await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
+     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("pause"))
@@ -2389,12 +2389,12 @@ async def pause_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.pause(message.chat.id)
-       await client.send_message(message.chat.id, f"⏸️ 𝗣𝗔𝗨𝗦𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗿𝗲𝘀𝘂𝗺𝗲 𝘁𝗼 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲\n┗ 👤 {message.from_user.mention()}"
-)
+       await client.send_message(message.chat.id, f"⏸️ 𝗣𝗔𝗨𝗦𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗿𝗲𝘀𝘂𝗺𝗲 𝘁𝗼 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲\n┗ 👤 {message.from_user.mention()}", 
+disable_web_page_preview=True)
    else:
-       await client.send_message(message.chat.id,  f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
+       await client.send_message(message.chat.id,  f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!")
+     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
 
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -2418,7 +2418,7 @@ async def broadcast_callback_handler(client, callback_query):
     bot_data = await find_one(collection, {"bot_id": client.me.id})
     message_to_broadcast, forwarding = broadcast_message.get(client.me.id)
     if bot_data and bot:
-        X = await callback_query.message.reply("Starting broadcast from bot")
+        X = await callback_query.message.reply("Starting broadcast from bot", disable_web_page_preview=True)
         users = bot_data.get('users', [])
         progress_msg = ""
         u, g, sg, a_chat = 0, 0, 0, 0
@@ -2472,14 +2472,14 @@ async def broadcast_callback_handler(client, callback_query):
 
 
     if userbot and session:
-        XX = await callback_query.message.reply("Starting broadcast from assistant")
+        XX = await callback_query.message.reply("Starting broadcast from assistant", disable_web_page_preview=True)
         uu, ug, usg, ua_chat = 0, 0, 0, 0
         try:
             # Ensure communication with the bot
             try:
                 await session.get_chat(client.me.id)
             except PeerIdInvalid:
-                await session.send_message(bot_username, "/start")
+                await session.send_message(bot_username, "/start", disable_web_page_preview=True)
             except UserBlocked:
                 await session.unblock_user(bot_username)
             await asyncio.sleep(1)
@@ -2526,7 +2526,7 @@ async def broadcast_callback_handler(client, callback_query):
 
         except Exception as e:
             logger.info(f"Error with session broadcast: {e}")
-            await XX.reply(f"An error occurred during userbot broadcasting.{e}")
+            await XX.reply(f"An error occurred during userbot broadcasting.{e}", disable_web_page_preview=True)
 
     # Finalize broadcast summary
         await XX.edit(
@@ -2684,7 +2684,7 @@ async def status_command_handler(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     await status(client, message)
 
@@ -2711,15 +2711,15 @@ async def broadcast_command_handler(client, message):
     )
 
     if not is_authorized:
-        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**")
+        return await message.reply("**MF\n\nTHIS IS OWNER/SUDOER'S COMMAND...**", disable_web_page_preview=True)
 
     sender_id = client.me.id
     user_data = await user_sessions.find_one({"bot_id": sender_id})
     if not user_data:
-        return await message.reply("User data not found. Please log in first.")
+        return await message.reply("User data not found. Please log in first.", disable_web_page_preview=True)
     if not isinstance(message, CallbackQuery):
       if not message.reply_to_message:
-        return await message.reply("please reply to any message to brodcaste")
+        return await message.reply("please reply to any message to brodcaste", disable_web_page_preview=True)
       broadcast_message[client.me.id] = [message.reply_to_message]
       broadcast_message[client.me.id].append(True if message.command[0].lower().startswith("f") else None)
     group = user_data.get('group')
@@ -2753,7 +2753,7 @@ async def broadcast_command_handler(client, message):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     else:  # If it's a normal command message
-        mess = await message.reply("Getting all chats, please wait...")
+        mess = await message.reply("Getting all chats, please wait...", disable_web_page_preview=True)
         await get_status(client)
         if broadcasts[client.me.id]:
            await mess.edit(
@@ -2761,7 +2761,7 @@ async def broadcast_command_handler(client, message):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
         else:
-           await message.reply("No data found")
+           await message.reply("No data found", disable_web_page_preview=True)
 
 
 
@@ -2831,11 +2831,11 @@ async def handle_power_command(client, message):
         await message.reply(
             power_message,
             #reply_markup=buttons
-        )
+        disable_web_page_preview=True)
 
     except Exception as e:
         logger.error(f"Power check error: {e}")
-        await message.reply("❌ Failed to check bot permissions!")
+        await message.reply("❌ Failed to check bot permissions!", disable_web_page_preview=True)
 
 
 
@@ -2860,7 +2860,7 @@ async def pingme(client, message):
     ]
 
     # Animated loading sequence
-    msg = await message.reply_text("🏓 **Pinging...**")
+    msg = await message.reply_text("🏓 **Pinging...**", disable_web_page_preview=True)
 
     for frame in ping_frames:
         await msg.edit(f"```\n{frame}\n```{choice(loading_emojis)}")
@@ -2924,7 +2924,7 @@ async def info_command(client: Client, message: Message):
     target_user = None
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
-        return await message.reply_text("Only bot owner is allowed to perform this command")
+        return await message.reply_text("Only bot owner is allowed to perform this command", disable_web_page_preview=True)
 
     if len(message.command) >= 2:
         user_input = message.command[1]
@@ -2937,7 +2937,7 @@ async def info_command(client: Client, message: Message):
                 username = user_input.strip('@')
                 target_user = await client.get_users(username)
         except Exception:
-            await message.reply("❌ User not found. Please provide a valid username or ID.")
+            await message.reply("❌ User not found. Please provide a valid username or ID.", disable_web_page_preview=True)
             return
 
     if target_user:
@@ -2997,13 +2997,13 @@ async def info_command(client: Client, message: Message):
             except Exception:
                 await message.reply(
                     response,
-                    reply_markup=create_copy_markup(response)
-                )
+                    reply_markup=create_copy_markup(response), 
+                disable_web_page_preview=True)
         else:
             await message.reply(
                 response,
-                reply_markup=create_copy_markup(response)
-            )
+                reply_markup=create_copy_markup(response), 
+            disable_web_page_preview=True)
         return
 
     # Rest of the original code for replied messages and chat info remains the same
@@ -3029,8 +3029,8 @@ async def info_command(client: Client, message: Message):
 
             await message.reply(
                 response,
-                reply_markup=create_copy_markup(response)
-            )
+                reply_markup=create_copy_markup(response), 
+            disable_web_page_preview=True)
 
         else:
             user = await client.get_users(replied.from_user.id)
@@ -3086,13 +3086,13 @@ async def info_command(client: Client, message: Message):
                 except Exception:
                     await message.reply(
                         response,
-                        reply_markup=create_copy_markup(response)
-                    )
+                        reply_markup=create_copy_markup(response), 
+                    disable_web_page_preview=True)
             else:
                 await message.reply(
                     response,
-                    reply_markup=create_copy_markup(response)
-                )
+                    reply_markup=create_copy_markup(response), 
+                disable_web_page_preview=True)
 
     else:
         if chat.type in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP):
@@ -3120,8 +3120,8 @@ async def info_command(client: Client, message: Message):
 
             await message.reply(
                 response,
-                reply_markup=create_copy_markup(response)
-            )
+                reply_markup=create_copy_markup(response), 
+            disable_web_page_preview=True)
 
         else:
             user = await client.get_users(chat.id)
@@ -3161,13 +3161,13 @@ async def info_command(client: Client, message: Message):
                 except Exception:
                     await message.reply(
                         response,
-                        reply_markup=create_copy_markup(response)
-                    )
+                        reply_markup=create_copy_markup(response), 
+                    disable_web_page_preview=True)
             else:
                 await message.reply(
                     response,
-                    reply_markup=create_copy_markup(response)
-                )
+                    reply_markup=create_copy_markup(response), 
+                disable_web_page_preview=True)
 
 
 @Client.on_callback_query(filters.regex("^close$"))
@@ -3178,8 +3178,8 @@ async def close_message(client, query):
         # Send confirmation with mention
         await client.send_message(
             query.message.chat.id,
-            f"🗑 Message closed by {query.from_user.mention}"
-        )
+            f"🗑 Message closed by {query.from_user.mention}", 
+        disable_web_page_preview=True)
     except Exception as e:
         print(f"Error closing message: {e}")
 
@@ -3192,9 +3192,9 @@ async def kang(client, message):
     client = clients['session']
     user = message.from_user
     if not user:
-       return await message.reply_text("Use this command as user")
+       return await message.reply_text("Use this command as user", disable_web_page_preview=True)
     replied = message.reply_to_message
-    Man = await message.reply_text("`It's also possible that the sticker is colong ahh...`")
+    Man = await message.reply_text("`It's also possible that the sticker is colong ahh...`", disable_web_page_preview=True)
     media_ = None
     emoji_ = None
     is_anim = False
@@ -3305,14 +3305,14 @@ async def kang(client, message):
             break
         if exist is not False:
             try:
-                await client.send_message("stickers", "/addsticker")
+                await client.send_message("stickers", "/addsticker", disable_web_page_preview=True)
             except YouBlockedUser:
                 await client.unblock_user("stickers")
-                await client.send_message("stickers", "/addsticker")
+                await client.send_message("stickers", "/addsticker", disable_web_page_preview=True)
             except Exception as e:
                 return await Man.edit(f"**ERROR:** `{e}`")
             await asyncio.sleep(2)
-            await client.send_message("stickers", packname)
+            await client.send_message("stickers", packname, disable_web_page_preview=True)
             await asyncio.sleep(2)
             limit = "50" if is_anim else "120"
             while limit in await get_response(message, client):
@@ -3328,27 +3328,27 @@ async def kang(client, message):
                     await Man.edit(
                     f"`Creating a New Sticker Pack {pack} Because the Sticker Pack is Full`"
                 )
-                await client.send_message("stickers", packname)
+                await client.send_message("stickers", packname, disable_web_page_preview=True)
                 await asyncio.sleep(2)
                 if await get_response(message, client) == "Invalid pack selected.":
-                    await client.send_message("stickers", cmd)
+                    await client.send_message("stickers", cmd, disable_web_page_preview=True)
                     await asyncio.sleep(2)
-                    await client.send_message("stickers", packnick)
+                    await client.send_message("stickers", packnick, disable_web_page_preview=True)
                     await asyncio.sleep(2)
                     await client.send_document("stickers", media_)
                     await asyncio.sleep(2)
-                    await client.send_message("Stickers", emoji_)
+                    await client.send_message("Stickers", emoji_, disable_web_page_preview=True)
                     await asyncio.sleep(2)
-                    await client.send_message("Stickers", "/publish")
+                    await client.send_message("Stickers", "/publish", disable_web_page_preview=True)
                     await asyncio.sleep(2)
                     if is_anim:
                         await client.send_message(
-                            "Stickers", f"<{packnick}>", parse_mode=ParseMode.MARKDOWN
-                        )
+                            "Stickers", f"<{packnick}>", parse_mode=ParseMode.MARKDOWN, 
+                        disable_web_page_preview=True)
                         await asyncio.sleep(2)
-                    await client.send_message("Stickers", "/skip")
+                    await client.send_message("Stickers", "/skip", disable_web_page_preview=True)
                     await asyncio.sleep(2)
-                    await client.send_message("Stickers", packname)
+                    await client.send_message("Stickers", packname, disable_web_page_preview=True)
                     await asyncio.sleep(2)
                     await Man.edit(
                         f"**Sticker Added Successfully!**\n 🔥 **[CLICK HERE](https://t.me/addstickers/{packname})** 🔥\n**To Use Stickers**"
@@ -3363,18 +3363,18 @@ async def kang(client, message):
                     "**Failed to Add Sticker, Use @Stickers Bot to Add Your Sticker.**"
                 )
                 return
-            await client.send_message("Stickers", emoji_)
+            await client.send_message("Stickers", emoji_, disable_web_page_preview=True)
             await asyncio.sleep(2)
-            await client.send_message("Stickers", "/done")
+            await client.send_message("Stickers", "/done", disable_web_page_preview=True)
         else:
             await Man.edit("`Creating a New Sticker Pack`")
             try:
-                await client.send_message("Stickers", cmd)
+                await client.send_message("Stickers", cmd, disable_web_page_preview=True)
             except YouBlockedUser:
                 await client.unblock_user("stickers")
-                await client.send_message("stickers", "/addsticker")
+                await client.send_message("stickers", "/addsticker", disable_web_page_preview=True)
             await asyncio.sleep(2)
-            await client.send_message("Stickers", packnick)
+            await client.send_message("Stickers", packnick, disable_web_page_preview=True)
             await asyncio.sleep(2)
             await client.send_document("stickers", media_)
             await asyncio.sleep(2)
@@ -3386,16 +3386,16 @@ async def kang(client, message):
                     "**Failed to Add Sticker, Use @Stickers Bot to Add Your Sticker.**"
                 )
                 return
-            await client.send_message("Stickers", emoji_)
+            await client.send_message("Stickers", emoji_, disable_web_page_preview=True)
             await asyncio.sleep(2)
-            await client.send_message("Stickers", "/publish")
+            await client.send_message("Stickers", "/publish", disable_web_page_preview=True)
             await asyncio.sleep(2)
             if is_anim:
-                await client.send_message("Stickers", f"<{packnick}>")
+                await client.send_message("Stickers", f"<{packnick}>", disable_web_page_preview=True)
                 await asyncio.sleep(2)
-            await client.send_message("Stickers", "/skip")
+            await client.send_message("Stickers", "/skip", disable_web_page_preview=True)
             await asyncio.sleep(2)
-            await client.send_message("Stickers", packname)
+            await client.send_message("Stickers", packname, disable_web_page_preview=True)
             await asyncio.sleep(2)
         await Man.edit(
             f"**Sticker Added Successfully!**\n 🔥 **[CLICK HERE](https://t.me/addstickers/{packname})** 🔥\n**To Use Stickers**"
@@ -3415,14 +3415,14 @@ async def get_response(message, client):
 @Client.on_message(filters.command("mmf"))
 async def memify(client, message):
     if not message.reply_to_message_id:
-        await message.reply_text("**Reply to any photo or sticker!**")
+        await message.reply_text("**Reply to any photo or sticker!**", disable_web_page_preview=True)
         return
     reply_message = message.reply_to_message
     if not reply_message.media:
-        await message.reply_text( "**Reply to any photo or sticker!**")
+        await message.reply_text( "**Reply to any photo or sticker!**", disable_web_page_preview=True)
         return
     file = await client.download_media(reply_message)
-    Man = await message.reply_text( "`Processing . . .`")
+    Man = await message.reply_text( "`Processing . . .`", disable_web_page_preview=True)
     text = get_arg(message)
     if len(text) < 1:
         return await Man.edit(f"Please use `/mmf <text>`")
@@ -3450,7 +3450,7 @@ async def set_welcome_handler(client, message):
     user_dir = f"{ggg}/{session_name}"
     try:
         if not sender_id == OWNER_ID:
-           return await message.reply_text("Only bot owner is allowed to perform this command")
+           return await message.reply_text("Only bot owner is allowed to perform this command", disable_web_page_preview=True)
 
         replied_msg = message.reply_to_message
         if not replied_msg:
@@ -3471,7 +3471,7 @@ async def set_welcome_handler(client, message):
                 "• 'Welcome {name}! Your ID is {id}'\n"
                 "• Reply to a photo/video with caption 'Welcome to {botname}!'"
             )
-            return await message.reply_text(usage_text)
+            return await message.reply_text(usage_text, disable_web_page_preview=True)
 
         updates = []
 
@@ -3479,7 +3479,7 @@ async def set_welcome_handler(client, message):
         if replied_msg.text or replied_msg.caption:
             welcome_text = (replied_msg.text or replied_msg.caption).strip()
             if len(welcome_text) > 4096:
-                return await message.reply_text("Welcome message too long. Maximum 4096 characters allowed.")
+                return await message.reply_text("Welcome message too long. Maximum 4096 characters allowed.", disable_web_page_preview=True)
 
             entities = sorted(
                 (replied_msg.entities or replied_msg.caption_entities or []),
@@ -3546,7 +3546,7 @@ async def set_welcome_handler(client, message):
                 error_msg += "• Welcome {name}!\n"
                 error_msg += "• Your ID: {id}\n"
                 error_msg += "• Welcome to {botname}!"
-                return await message.reply_text(error_msg)
+                return await message.reply_text(error_msg, disable_web_page_preview=True)
 
             set_gvar(client.me.id, "WELCOME", processed_text)
             updates.append("welcome message")
@@ -3558,12 +3558,12 @@ async def set_welcome_handler(client, message):
                 # Check if media type is allowed
                 if not (replied_msg.photo or replied_msg.video or
                        replied_msg.sticker or replied_msg.animation):
-                    return await message.reply_text("Only photos, videos, GIFs, and stickers are allowed.")
+                    return await message.reply_text("Only photos, videos, GIFs, and stickers are allowed.", disable_web_page_preview=True)
 
                 # Check file size (5MB = 5 * 1024 * 1024 bytes)
                 file_size = getattr(replied_msg, 'file_size', 0)
                 if file_size > 5242880:  # 5MB in bytes
-                    return await message.reply_text("Media size cannot exceed 5MB.")
+                    return await message.reply_text("Media size cannot exceed 5MB.", disable_web_page_preview=True)
 
                 # First try to save to user_dir
                 logo_path_jpg = f"{user_dir}/logo.jpg"
@@ -3588,14 +3588,14 @@ async def set_welcome_handler(client, message):
             except Exception as e:
                 if m_d and os.path.exists(m_d):
                     os.remove(m_d)
-                return await message.reply_text(f"Error processing media: {str(e)}")
+                return await message.reply_text(f"Error processing media: {str(e)}", disable_web_page_preview=True)
 
         if not updates:
-            return await message.reply_text("Nothing to update. Message must contain text and/or media.")
+            return await message.reply_text("Nothing to update. Message must contain text and/or media.", disable_web_page_preview=True)
 
         # Send confirmation and preview
         success_msg = f"✅ Updated {' and '.join(updates)}!"
-        await client.send_message(message.chat.id, success_msg + "\n\nPreview:")
+        await client.send_message(message.chat.id, success_msg + "\n\nPreview:", disable_web_page_preview=True)
 
         # Show preview
         try:
@@ -3655,18 +3655,18 @@ async def set_welcome_handler(client, message):
                 await client.send_message(
                     message.chat.id,
                     welcome_text,
-                )
+                disable_web_page_preview=True)
     except Exception as e:
         error_msg = f"❌ Error: `{str(e)}`"
         logger.info(f"Error for user {message.from_user.id}: {str(e)}")
-        return await message.reply_text(error_msg)
+        return await message.reply_text(error_msg, disable_web_page_preview=True)
 
 @Client.on_message(filters.command(["resetwelcome", "rwelcome"]))
 async def resetwelcome(client: Client, message: Message):
     sender_id = message.from_user.id
     if not sender_id == OWNER_ID:
-        return await message.reply_text("Only bot owner is allowed to perform this command")
+        return await message.reply_text("Only bot owner is allowed to perform this command", disable_web_page_preview=True)
 
     set_gvar(client.me.id, "WELCOME", None)
     set_gvar(client.me.id, "LOGO", None)
-    await message.reply_text("Welcome message and logo have been reset.")
+    await message.reply_text("Welcome message and logo have been reset.", disable_web_page_preview=True)

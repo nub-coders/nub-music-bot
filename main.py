@@ -4,8 +4,6 @@ import os
 import logging
 # Third-party libraries
 from pytgcalls import filters as call_filters
-from pytgcalls import PyTgCalls
-from pytgcalls.types import ChatUpdate
 from pyrogram import Client
 from pyrogram.errors.exceptions import SessionRevoked, UserDeactivatedBan, AuthKeyInvalid, \
     AuthKeyUnregistered, AuthTokenExpired, AuthKeyDuplicated, AccessTokenExpired, UserDeactivated
