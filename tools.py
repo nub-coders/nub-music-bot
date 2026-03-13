@@ -952,8 +952,8 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
             chat_id,
             MediaStream(
                 stream_source,
-                AudioQuality.MEDIUM,
-                VideoQuality.SD_360p,
+                AudioQuality.STUDIO,
+                VideoQuality.HD_720p,
                 video_flags=audio_flags,
             ),
         )

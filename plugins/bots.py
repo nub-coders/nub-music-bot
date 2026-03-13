@@ -409,8 +409,8 @@ async def seek_handler_func(client, message):
                 message.chat.id,
                 MediaStream(
                     stream_url,
-                    AudioQuality.MEDIUM,
-                    VideoQuality.SD_360p,
+                    AudioQuality.STUDIO,
+                VideoQuality.HD_720p,
                     video_flags=audio_flags,
                     ffmpeg_parameters=f"-ss {to_seek} -to {duration_str}"
                 ),
