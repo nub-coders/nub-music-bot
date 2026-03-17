@@ -19,8 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create startup script that pulls latest changes and runs the app
-RUN echo '#!/bin/bash\nif [ -d ".git" ]; then\n  echo "Pulling latest changes..."\n  git pull\nfi\necho "Starting application..."\npython3 main.py' > start.sh && \
+RUN echo '#!/bin/bash\necho "Starting application..."\npython3 main.py' > start.sh && \
     chmod +x start.sh
 
 # Default command
