@@ -61,6 +61,11 @@
       "description": "get this api from @ytdlp_api_bot",
       "value": "",
       "required": false
+    },
+    "NUB_YT_API_BASE_URL": {
+      "description": "Base URL for external YouTube API proxy (optional, falls back to yt-dlp if not set)",
+      "value": "http://api.nubcoder.com",
+      "required": false
     }
   },
   "buildpacks": [

@@ -82,72 +82,56 @@ def admin_only():
                     reply_id = update.message.id
                     user_id = update.from_user.id if update.from_user else None
                     command = update.data
-                    logger.debug(f"Callback query from user {user_id} in chat {chat_id}")
                 else:
                     chat_id = update.chat.id
                     reply_id = update.id
                     user_id = update.from_user.id if update.from_user else None
                     command = update.command[0].lower()
-                    logger.debug(f"Message command '{command}' from user {user_id} in chat {chat_id}")
 
                 if not user_id:
                     linked_chat = await client.get_chat(chat_id)
                     if linked_chat.linked_chat and update.sender_chat.id == linked_chat.linked_chat.id:
-                        logger.debug("Message from linked channel, allowing access")
                         return await func(client, update)
-                    logger.warning("Cannot verify admin status from unknown user")
                     if isinstance(update, CallbackQuery):
                         await update.answer("⚠️ Cannot verify admin status from unknown user.", show_alert=True)
                     else:
                         await update.reply("⚠️ Cannot verify admin status from unknown user.", reply_to_message_id=reply_id, disable_web_page_preview=True)
                     return
 
-                logger.debug("Performing admin check")
+                # --- Fast in-memory checks first (no network I/O) ---
+                is_admin = user_id in get_admin_ids(f"{ggg}/admin.txt")
+                is_owner = str(OWNER_ID) == str(user_id)
+                is_sudo = user_id in SUDO
 
-                # Check admin status using cached admin IDs (avoids disk read on every command)
-                admin_file = f"{ggg}/admin.txt"
-                admin_ids = get_admin_ids(admin_file)
-                is_admin = user_id in admin_ids
-                if is_admin:
-                    logger.debug(f"User {user_id} is in admin list")
-
-                # Check permissions using global variables
                 is_auth_user = False
-                if str(chat_id) in AUTH:
-                    is_auth_user = user_id in AUTH[str(chat_id)]
-                    if is_auth_user:
-                        logger.debug(f"User {user_id} is authorized for chat {chat_id}")
+                chat_key = str(chat_id)
+                if chat_key in AUTH:
+                    is_auth_user = user_id in AUTH[chat_key]
 
                 if not isinstance(update, CallbackQuery):
                     if command and str(command).endswith('del'):
                         is_auth_user = False
-                        logger.debug("Command ends with 'del', auth_user status reset")
 
-                is_authorized = (
-                    is_admin or str(OWNER_ID) == str(user_id) or user_id in SUDO or is_auth_user)
+                is_authorized = is_admin or is_owner or is_sudo or is_auth_user
 
-                # Get chat member status
+                # --- Song-owner skip check (in-memory, no I/O) ---
+                is_song_owner_skip = False
+                if command in ("skip", "cskip"):
+                    _cid = update.message.chat.id if isinstance(update, CallbackQuery) else update.chat.id
+                    song = playing.get(_cid)
+                    if song and hasattr(song.get("by"), "id") and song["by"].id == user_id:
+                        is_song_owner_skip = True
+
+                # --- Short-circuit: skip network call if already authorized ---
+                if is_authorized or is_song_owner_skip:
+                    logger.info(f"User {user_id} authorized for {func.__name__} (fast-path)")
+                    return await func(client, update)
+
+                # --- Fallback: check Telegram group admin status (1 network call) ---
                 chat_member = await client.get_chat_member(chat_id, user_id)
                 is_chat_admin = chat_member.status in (ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR)
 
-                # Check if user is trying to skip their own song (only for skip commands)
-                is_song_owner_skip = False
-                if command in ["skip", "cskip"]:
-                    if isinstance(update, CallbackQuery):
-                        if update.message.chat.id in playing and playing[update.message.chat.id]:
-                            current_song = playing[update.message.chat.id]
-                            if current_song["by"].id == user_id:
-                                is_song_owner_skip = True
-                                logger.debug(f"User {user_id} is song owner for skip command")
-                    else:
-                        if update.chat.id in playing and playing[update.chat.id]:
-                            current_song = playing[update.chat.id]
-                            if current_song["by"].id == user_id:
-                                is_song_owner_skip = True
-                                logger.debug(f"User {user_id} is song owner for skip command")
-
-                # Allow access if user is admin OR (for skip commands only) if they own the song
-                if not (is_chat_admin or is_authorized or is_song_owner_skip):
+                if not is_chat_admin:
                     logger.warning(f"User {user_id} not authorized for command {command}")
                     if isinstance(update, CallbackQuery):
                         await update.answer("⚠️ This action is restricted to admins only.", show_alert=True)
@@ -159,8 +143,7 @@ def admin_only():
                 return await func(client, update)
 
             except Exception as e:
-                error_msg = f"Error checking admin status: {str(e)}"
-                logger.error(error_msg)
+                logger.error(f"Error checking admin status: {e}")
                 if isinstance(update, CallbackQuery):
                     await update.answer("⚠️ Authorization check failed.", show_alert=True)
                 else:

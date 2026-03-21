@@ -237,160 +237,149 @@ async def remove_active_chat(chat_id):
     clear_directory(chat_dir)
 
 
-async def autoleave_vc(message, duration_str,chat):
+async def autoleave_vc(message, duration_str, chat):
     """
-    Automatically leave voice chat when only the bot remains in the call for 5 seconds
+    Automatically leave voice chat when only the bot remains in the call.
     """
-
     while True:
         try:
-            # Track if song duration changes
-            if chat.id in playing and playing[chat.id]:
-                current_song = playing[chat.id]
-                if str(current_song['duration']) != str(duration_str):
-                    break
+            # Stop if song changed (duration changed = new song)
+            song = playing.get(chat.id)
+            if song and str(song.get('duration')) != str(duration_str):
+                break
         except Exception:
             pass
 
         try:
-            # Get current call members
-            members = []
+            # Count members with a simple integer — no need to build a list
+            member_count = 0
+            solo_bot = False
             async for member in clients["session"].get_call_members(chat.id):
-                members.append(member)
+                member_count += 1
+                if member_count == 1 and member.chat.id == clients["session"].me.id:
+                    solo_bot = True
+                elif member_count > 1:
+                    solo_bot = False
+                    break
 
-            # Check if only bot remains in call
-            if len(members) == 1 and members[0].chat.id == clients["session"].me.id:
-                # Confirm persistent presence check
-                await asyncio.sleep(25)
+            if member_count == 1 and solo_bot:
+                await asyncio.sleep(25)  # Confirm persistent emptiness
 
-                # Recheck after cooldown
-                members = []
+                # Recheck
+                member_count = 0
+                solo_bot = False
                 async for member in clients["session"].get_call_members(chat.id):
-                    members.append(member)
+                    member_count += 1
+                    if member_count == 1 and member.chat.id == clients["session"].me.id:
+                        solo_bot = True
+                    elif member_count > 1:
+                        solo_bot = False
+                        break
 
-                # Final verification before leaving
-                if len(members) == 1 and members[0].chat.id == clients["session"].me.id:
+                if member_count == 1 and solo_bot:
                     await clients["call_py"].leave_call(chat.id)
-                    # Cleanup operations
                     try:
                         queues[chat.id].clear()
                         playing[chat.id].clear()
                     except KeyError:
                         pass
-
-                    await remove_active_chat(chat.id)
+                    await remove_active_chat(chat.id)  # called once
                     await clients["bot"].send_message(
                         message.chat.id,
-                        "⚠️ Nᴏ ᴀᴄᴛɪᴠᴇ ʟɪsᴛᴇɴᴇʀs ᴅᴇᴛᴇᴄᴛᴇᴅ. Lᴇᴀᴠɪɴɢ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ.", 
-                    disable_web_page_preview=True)
-                    await remove_active_chat(chat.id)
+                        "⚠️ Nᴏ ᴀᴄᴛɪᴠᴇ ʟɪꜱᴛᴇɴᴇʀꜱ ɖᴇᴛᴇᴄᴛᴇᴅ. Lᴇᴀᴠɪɴɢ ᴠᴏɪᴄᴇ Cʜᴀᴛ.",
+                        disable_web_page_preview=True
+                    )
                     break
 
         except Exception as e:
             print(f"Autoleave error: {e}")
             break
 
-        # Reduced check interval
         await asyncio.sleep(8)
-
 async def pautoleave_vc(message, duration_str):
     """
-    Automatically leave voice chat when members count is <= 1 for 5 seconds
-
-    :param user_client: User client to get call members and send messages
-    :param call_py: PyTgCalls client for leaving call
-    :param message: Message object containing chat information
-    :param playing: Dictionary tracking currently playing songs
-    :param duration_str: Current song duration
+    Automatically leave voice chat when members count is <= 1.
     """
     while True:
         try:
-            # Check if current song duration changed
-            if message.chat.id in playing and playing[message.chat.id]:
-                current_song = playing[message.chat.id]
-                if str(current_song['duration']) != str(duration_str):
-                    break
+            song = playing.get(message.chat.id)
+            if song and str(song.get('duration')) != str(duration_str):
+                break
         except Exception:
             pass
 
-        # Get current call members
-        members = []
+        # Count members with a simple integer — no need for a full list
+        member_count = 0
         try:
-          async for i in clients["session"].get_call_members(message.chat.id):
-            members.append(i)
-        except:
-           break
-        # Check if members count is <= 1
-        if len(members) <= 1:
-            # Wait 5 seconds to confirm
-            await asyncio.sleep(5)
+            async for _ in clients["session"].get_call_members(message.chat.id):
+                member_count += 1
+                if member_count > 1:  # early exit — we only care about <= 1
+                    break
+        except Exception:
+            break
 
-            # Recheck members count after 5 seconds
-            members = []
-            async for i in clients["session"].get_call_members(message.chat.id):
-                members.append(i)
+        if member_count <= 1:
+            await asyncio.sleep(5)  # Confirm for 5 seconds
 
-            # If still <= 1 member, leave the voice chat
-            if len(members) <= 1:
+            member_count = 0
+            async for _ in clients["session"].get_call_members(message.chat.id):
+                member_count += 1
+                if member_count > 1:
+                    break
+
+            if member_count <= 1:
                 await clients["call_py"].leave_call(message.chat.id)
-                # Send message about leaving
-                try:
-                    queues[message.chat.id].clear()
-                except:
-                   pass
-                try:
-                    playing[message.chat.id].clear()
-                except:
-                   pass
+                queues.pop(message.chat.id, None)
+                playing.pop(message.chat.id, None)
                 await remove_active_chat(message.chat.id)
                 await clients["bot"].send_message(
-                    message.chat.id, 
-                    f"ɴᴏ ᴏɴᴇ ɪꜱ ʟɪꜱᴛᴇɴɪɴɢ ᴛᴏ ᴛʜᴇ ꜱᴛʀᴇᴀᴍ, ꜱᴏ ᴛʜᴇ ᴀꜱꜱɪꜱᴛᴀɴᴛ ʟᴇꜰᴛ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ.", 
-                disable_web_page_preview=True)
+                    message.chat.id,
+                    "nᴀɴᴩɴᴇ ɪꜱ ʟɪꜱᴛᴇɴɪɴɢ ᴛᴏ ᴛʜᴇ ꜱᴛʀᴇᴀᴍ, ꜱᴏ ᴛʜᴇ ᴀꜱꜱɪꜱᴛᴀɴᴛ ʟᴇғᴛ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ.",
+                    disable_web_page_preview=True
+                )
                 break
 
         # Wait before next check
         await asyncio.sleep(10)
 
 
-async def update_progress_button(message, duration_str,chat):
+async def update_progress_button(message, duration_str, chat):
     try:
         total_seconds = sum(int(x) * 60 ** i for i, x in enumerate(reversed(duration_str.split(":"))))
 
         while True:
+            # Check elapsed time from pytgcalls
             try:
-                updated_msg = await clients["call_py"]._mtproto.get_messages(message.chat.id,message.id)
-            except:
-                break
+                elapsed_seconds = int(time.time() - played[chat.id])
+            except Exception:
+                break  # Song ended or chat removed
+
+            # Stop updating if song changed
             try:
-                # Fetch elapsed seconds
-                elapsed_seconds = int(await clients["call_py"].time(chat.id))
-            except Exception as e:
-                # If an exception occurs, the song has ended
-                break
-            try:
-               if chat.id in playing and playing[chat.id]:
-                   current_song = playing[chat.id]
-                   if str(current_song['duration']) != str(duration_str):
-                       break            # Format elapsed time
-            except Exception as e:
+                song = playing.get(chat.id)
+                if not song or str(song.get('duration')) != str(duration_str):
+                    break
+            except Exception:
                 pass
-            elapsed_str = time.strftime('%M:%S', time.gmtime(int(time.time() - played[chat.id])))
-            elapsed_seconds = int(time.time() - played[chat.id])
-            # Calculate progress bar (6 `─` with spaces)
+
+            elapsed_str = time.strftime('%M:%S', time.gmtime(elapsed_seconds))
+
+            # Progress bar (8 segments)
             progress_length = 8
             position = min(int((elapsed_seconds / total_seconds) * progress_length), progress_length)
-            progress_bar = "─ " * position + "▷" + "─ " * (progress_length - position - 1)
-            progress_bar = progress_bar.strip()  # Remove trailing spaces
-
+            progress_bar = ("─ " * position + "▷" + "─ " * (progress_length - position - 1)).strip()
             progress_text = f"{elapsed_str} {progress_bar} {duration_str}"
 
-            # Insert progress bar between the first and last rows
+            # Update keyboard in-place (insert progress bar between first and last rows)
             keyboard = message.reply_markup.inline_keyboard
             progress_row = [InlineKeyboardButton(text=progress_text, callback_data="ignore")]
             updated_keyboard = keyboard[:1] + [progress_row] + keyboard[1:]
 
-            await message.edit_reply_markup(InlineKeyboardMarkup(updated_keyboard))
+            try:
+                await message.edit_reply_markup(InlineKeyboardMarkup(updated_keyboard))
+            except Exception:
+                break  # Message deleted or bot lacks permission
+
             await asyncio.sleep(9)
     except Exception as e:
         print(f"Progress update error: {e}")
@@ -605,23 +594,14 @@ def convert_bytes(size: float) -> str:
     return "{:.2f} {}B".format(size, power_dict[t_n])
 
 
-async def int_to_alpha(user_id: int) -> str:
-    alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    text = ""
-    user_id = str(user_id)
-    for i in user_id:
-        text += alphabet[int(i)]
-    return text
+def int_to_alpha(user_id: int) -> str:
+    alphabet = "abcdefghij"
+    return "".join(alphabet[int(d)] for d in str(user_id))
 
 
-async def alpha_to_int(user_id_alphabet: str) -> int:
-    alphabet = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-    user_id = ""
-    for i in user_id_alphabet:
-        index = alphabet.index(i)
-        user_id += str(index)
-    user_id = int(user_id)
-    return user_id
+def alpha_to_int(user_id_alphabet: str) -> int:
+    alphabet = "abcdefghij"
+    return int("".join(str(alphabet.index(c)) for c in user_id_alphabet))
 
 
 
@@ -647,13 +627,14 @@ def seconds_to_min(seconds):
 
 
 def speed_converter(seconds, speed):
-    if str(speed) == str("0.5"):
+    speed = float(speed)
+    if speed == 0.5:
         seconds = seconds * 2
-    if str(speed) == str("0.75"):
+    elif speed == 0.75:
         seconds = seconds + ((50 * seconds) // 100)
-    if str(speed) == str("1.5"):
+    elif speed == 1.5:
         seconds = seconds - ((25 * seconds) // 100)
-    if str(speed) == str("2.0"):
+    elif speed == 2.0:
         seconds = seconds - ((50 * seconds) // 100)
     collect = seconds
     if seconds is not None:
@@ -665,17 +646,13 @@ def speed_converter(seconds, speed):
             seconds % 3600 % 60,
         )
         if d > 0:
-            convert = "{:02d}:{:02d}:{:02d}:{:02d}".format(d, h, m, s)
-            return convert, collect
+            return "{:02d}:{:02d}:{:02d}:{:02d}".format(d, h, m, s), collect
         elif h > 0:
-            convert = "{:02d}:{:02d}:{:02d}".format(h, m, s)
-            return convert, collect
+            return "{:02d}:{:02d}:{:02d}".format(h, m, s), collect
         elif m > 0:
-            convert = "{:02d}:{:02d}".format(m, s)
-            return convert, collect
+            return "{:02d}:{:02d}".format(m, s), collect
         elif s > 0:
-            convert = "00:{:02d}".format(s)
-            return convert, collect
+            return "00:{:02d}".format(s), collect
     return "-"
 
 
@@ -707,45 +684,13 @@ def check_duration(file_path):
     return "Unknown"
 
 
-formats = [
-    "webm",
-    "mkv",
-    "flv",
-    "vob",
-    "ogv",
-    "ogg",
-    "rrc",
-    "gifv",
-    "mng",
-    "mov",
-    "avi",
-    "qt",
-    "wmv",
-    "yuv",
-    "rm",
-    "asf",
-    "amv",
-    "mp4",
-    "m4p",
-    "m4v",
-    "mpg",
-    "mp2",
-    "mpeg",
-    "mpe",
-    "mpv",
-    "m4v",
-    "svi",
-    "3gp",
-    "3g2",
-    "mxf",
-    "roq",
-    "nsv",
-    "flv",
-    "f4v",
-    "f4p",
-    "f4a",
-    "f4b",
-]
+# frozenset for O(1) membership checks
+formats = frozenset([
+    "webm", "mkv", "flv", "vob", "ogv", "ogg", "rrc", "gifv", "mng",
+    "mov", "avi", "qt", "wmv", "yuv", "rm", "asf", "amv", "mp4", "m4p",
+    "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "svi", "3gp", "3g2",
+    "mxf", "roq", "nsv", "f4v", "f4p", "f4a", "f4b",
+])
 
 async def convert_to_image(message, client) -> [None, str]:
     """Convert Most Media Formats To Raw Image"""
@@ -895,13 +840,11 @@ async def add_text_img(image_path, text):
 
 
 async def hd_stream_closed_kicked(client, update):
-   logger.info(update)
-   try:
-       await remove_active_chat(update.chat_id)
-       queues[update.chat_id].clear()
-       playing[update.chat_id].clear()
-   except Exception as e:
-      logger.info(e)
+    logger.info(update)
+    chat_id = update.chat_id
+    await remove_active_chat(chat_id)
+    queues.pop(chat_id, None)
+    playing.pop(chat_id, None)
 
 
 async def join_call(message, title, youtube_link, chat, by, duration, mode, thumb, stream_url=None):
@@ -917,14 +860,12 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
 
     try:
         chat_id = chat.id
-        logger.debug(f"[join_call] Resolved chat_id: {chat_id}")
         audio_flags = MediaStream.Flags.IGNORE if mode == "audio" else None
-        logger.debug(f"[join_call] Mode '{mode}' - audio_flags set to: {audio_flags}")
 
-        position = len(queues.get(chat_id, []))
-        logger.debug(f"[join_call] Current queue position: {position}, queue_size: {len(queues.get(chat_id, []))}")
-
-        logger.debug(f"[join_call] Determining stream source...")
+        queue = queues.get(chat_id, [])
+        position = len(queue)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"[join_call] chat={chat_id} title='{title}' mode={mode} position={position} thumb={'set' if thumb else 'None'}")
         if stream_url:
             stream_source = stream_url
             logger.info(f"[join_call] Using provided stream URL: {stream_url[:100]}... (len={len(stream_url)})")
@@ -999,12 +940,15 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         ])
 
         logger.debug(f"[join_call] Constructing message text with play_styles")
-        mode_formatted = lightyagami(mode) if 'lightyagami' in globals() else mode
-        title_formatted = lightyagami(title) if 'lightyagami' in globals() else title
+        mode_formatted = lightyagami(mode) if callable(lightyagami) else mode
+        title_formatted = lightyagami(title) if callable(lightyagami) else title
 
         display_title = f"[{title_formatted}](https://t.me/{clients['bot'].me.username}?start=vidid_{extract_video_id(youtube_link)})" if youtube_link and not os.path.exists(youtube_link) else title_formatted
 
-        style_index = int(await gvarstatus(OWNER_ID, "format") or 11) if 'gvarstatus' in globals() and 'OWNER_ID' in globals() else 11
+        try:
+            style_index = int(await gvarstatus(OWNER_ID, "format") or 11)
+        except Exception:
+            style_index = 11
         logger.debug(f"[join_call] Using play_style index: {style_index}")
 
         message_text = play_styles.get(style_index, play_styles[11]).format(

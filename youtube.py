@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Optional API token and base URL for external YouTube API proxy
 API_TOKEN = os.getenv("YT_API_TOKEN", None)
-BASE_URL = os.getenv("YT_API_BASE_URL", "")
+BASE_URL = os.getenv("NUB_YT_API_BASE_URL", "")
 
 SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 DETAILS_URL = "https://www.googleapis.com/youtube/v3/videos"
