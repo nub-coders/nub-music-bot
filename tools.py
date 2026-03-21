@@ -22,6 +22,7 @@ from typing import Tuple, Optional
 from functools import wraps
 
 from pyrogram import Client, filters, enums
+from pyrogram.enums import ButtonStyle
 from pyrogram.errors.exceptions import InviteHashExpired, ChannelPrivate
 from pyrogram.errors import FloodWait, RPCError
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -985,14 +986,14 @@ async def join_call(message, title, youtube_link, chat, by, duration, mode, thum
         logger.debug(f"[join_call] Creating inline keyboard for playback controls")
         keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton(text="▷", callback_data="resume"),
-                InlineKeyboardButton(text="II", callback_data="pause"),
-                InlineKeyboardButton(text="‣‣I", callback_data="skip"),
-                InlineKeyboardButton(text="▢", callback_data="end"),
+                InlineKeyboardButton(text="▷", callback_data="resume", style=ButtonStyle.SUCCESS),
+                InlineKeyboardButton(text="II", callback_data="pause", style=ButtonStyle.DEFAULT),
+                InlineKeyboardButton(text="‣‣I", callback_data="skip", style=ButtonStyle.PRIMARY),
+                InlineKeyboardButton(text="▢", callback_data="end", style=ButtonStyle.DANGER),
             ],
             [
                 InlineKeyboardButton(
-                    text="✖ Close", callback_data="close"
+                    text="✖ Close", callback_data="close", style=ButtonStyle.DANGER
                 )
             ],
         ])

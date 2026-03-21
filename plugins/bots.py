@@ -11,7 +11,7 @@ import time
 from functools import wraps
 
 from pyrogram import Client, filters, enums
-from pyrogram.enums import ChatType, ChatMemberStatus
+from pyrogram.enums import ChatType, ChatMemberStatus, ButtonStyle
 from pyrogram.errors import (
     StickersetInvalid,
     YouBlockedUser,
@@ -1035,7 +1035,8 @@ async def user_client_start_handler(client, message):
                 keyboard = InlineKeyboardMarkup([
                     [InlineKeyboardButton(
                         "🎬 Stream on YouTube",
-                        url=video_info['video_url']
+                        url=video_info['video_url'],
+                        style=ButtonStyle.PRIMARY
                     )]
                 ])
 
@@ -1075,17 +1076,19 @@ async def user_client_start_handler(client, message):
     ow_id = owner.id if owner.username else None
 
     buttons = [
-   [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
-   [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
+   [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true", style=ButtonStyle.PRIMARY)],
+   [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all", style=ButtonStyle.PRIMARY)],
    [
        InlineKeyboardButton(
            "Cʀᴇᴀᴛᴏʀ",
-           user_id=OWNER_ID
+           user_id=OWNER_ID,
+           style=ButtonStyle.DEFAULT
        ) if ow_id else InlineKeyboardButton(
            "Cʀᴇᴀᴛᴏʀ",
-           url="https://t.me/NubDockerbot"
+           url="https://t.me/NubDockerbot",
+           style=ButtonStyle.DEFAULT
        ),
-       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url = f"https://t.me/{GROUP}")
+       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=f"https://t.me/{GROUP}", style=ButtonStyle.DEFAULT)
    ],
 ]
     import psutil
@@ -1262,29 +1265,29 @@ async def commands_handler(client, callback_query):
     # ---------- Navigation buttons ----------
     category_buttons = [
         [
-            InlineKeyboardButton("🎵 Playback",   callback_data="commands_playback"),
-            InlineKeyboardButton("🔐 Auth",       callback_data="commands_auth"),
+            InlineKeyboardButton("🎵 Playback",   callback_data="commands_playback", style=ButtonStyle.PRIMARY),
+            InlineKeyboardButton("🔐 Auth",       callback_data="commands_auth", style=ButtonStyle.PRIMARY),
         ],
         [
-            InlineKeyboardButton("🚫 Blocklist",  callback_data="commands_blocklist"),
-            InlineKeyboardButton("🔑 Sudo",       callback_data="commands_sudo"),
+            InlineKeyboardButton("🚫 Blocklist",  callback_data="commands_blocklist", style=ButtonStyle.DANGER),
+            InlineKeyboardButton("🔑 Sudo",       callback_data="commands_sudo", style=ButtonStyle.PRIMARY),
         ],
         [
-            InlineKeyboardButton("📢 Broadcast",  callback_data="commands_broadcast"),
-            InlineKeyboardButton("🛠️ Tools",     callback_data="commands_tools"),
+            InlineKeyboardButton("📢 Broadcast",  callback_data="commands_broadcast", style=ButtonStyle.PRIMARY),
+            InlineKeyboardButton("🛠️ Tools",     callback_data="commands_tools", style=ButtonStyle.DEFAULT),
         ],
         [
-            InlineKeyboardButton("🎨 Kang/Meme",  callback_data="commands_kang"),
-            InlineKeyboardButton("📊 Status",     callback_data="commands_status"),
+            InlineKeyboardButton("🎨 Kang/Meme",  callback_data="commands_kang", style=ButtonStyle.DEFAULT),
+            InlineKeyboardButton("📊 Status",     callback_data="commands_status", style=ButtonStyle.DEFAULT),
         ],
         [
-            InlineKeyboardButton("⚙️ Owner",      callback_data="commands_owner"),
-            InlineKeyboardButton("🌐 Repo", url="https://github.com/nub-coders/nub-music-bot"),
+            InlineKeyboardButton("⚙️ Owner",      callback_data="commands_owner", style=ButtonStyle.PRIMARY),
+            InlineKeyboardButton("🌐 Repo", url="https://github.com/nub-coders/nub-music-bot", style=ButtonStyle.DEFAULT),
         ],
-        [InlineKeyboardButton("🏠 Home",         callback_data="commands_back")],
+        [InlineKeyboardButton("🏠 Home",         callback_data="commands_back", style=ButtonStyle.DEFAULT)],
     ]
 
-    back_button = [[InlineKeyboardButton("🔙 Back", callback_data="commands_all")]]
+    back_button = [[InlineKeyboardButton("🔙 Back", callback_data="commands_all", style=ButtonStyle.DEFAULT)]]
 
     # ---------- Routing ----------
     if data == "all":
@@ -1324,17 +1327,19 @@ async def commands_handler(client, callback_query):
 """
             greet_message = await format_welcome_message(client, greet_message, user_id, callback_query.from_user.mention())
             buttons = [
-                [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true")],
-                [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all")],
+                [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true", style=ButtonStyle.PRIMARY)],
+                [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all", style=ButtonStyle.PRIMARY)],
                 [
                     InlineKeyboardButton(
                         "Cʀᴇᴀᴛᴏʀ",
-                        user_id=OWNER_ID
+                        user_id=OWNER_ID,
+                        style=ButtonStyle.DEFAULT
                     ) if ow_id else InlineKeyboardButton(
                         "Cʀᴇᴀᴛᴏʀ",
-                        url="https://t.me/NubDockerbot"
+                        url="https://t.me/NubDockerbot",
+                        style=ButtonStyle.DEFAULT
                     ),
-                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url = f"https://t.me/{GROUP}")
+                    InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=f"https://t.me/{GROUP}", style=ButtonStyle.DEFAULT)
                 ],
             ]
             await callback_query.message.edit_caption(
@@ -1793,15 +1798,16 @@ async def play_handler_func(client, message):
                 position = len(queues.get(message.chat.id)) if queues.get(target_chat.id) else 1
                 keyboard = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("▷", callback_data=f"{'c' if channel_mode else ''}resume"),
-                InlineKeyboardButton("II", callback_data=f"{'c' if channel_mode else ''}pause"),
-                InlineKeyboardButton("‣‣I", callback_data=f"{'c' if channel_mode else ''}skip"),
-                InlineKeyboardButton("▢", callback_data=f"{'c' if channel_mode else ''}end"),
+                InlineKeyboardButton("▷", callback_data=f"{'c' if channel_mode else ''}resume", style=ButtonStyle.SUCCESS),
+                InlineKeyboardButton("II", callback_data=f"{'c' if channel_mode else ''}pause", style=ButtonStyle.DEFAULT),
+                InlineKeyboardButton("‣‣I", callback_data=f"{'c' if channel_mode else ''}skip", style=ButtonStyle.PRIMARY),
+                InlineKeyboardButton("▢", callback_data=f"{'c' if channel_mode else ''}end", style=ButtonStyle.DANGER),
             ],
         [
             InlineKeyboardButton(
                 text="✖ Close",
-                callback_data="close"
+                callback_data="close",
+                style=ButtonStyle.DANGER
             )
         ],
         ])
@@ -2825,7 +2831,7 @@ async def handle_power_command(client, message):
         # Create inline buttons for refresh and support
         buttons = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_power_{message.chat.id}"),
+                InlineKeyboardButton("🔄 Refresh", callback_data=f"refresh_power_{message.chat.id}", style=ButtonStyle.PRIMARY),
             ]
         ])
 
@@ -2918,7 +2924,7 @@ async def info_command(client: Client, message: Message):
 
     def create_copy_markup(text: str) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([[
-            InlineKeyboardButton("Copy Info", copy_text=text)
+            InlineKeyboardButton("Copy Info", copy_text=text, style=ButtonStyle.PRIMARY)
         ]])
 
     # Handle second argument if provided
