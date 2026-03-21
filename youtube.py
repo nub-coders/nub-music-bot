@@ -1,93 +1,314 @@
 
-import requests
-import subprocess
-import sys
+
+
 import os
 import re
+import logging
+import asyncio
+import httpx
+import random
+import hashlib
 import json
 import time
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime
-from yt_dlp import YoutubeDL
-import yt_dlp
-import logging
+from urllib.parse import urlparse, parse_qs
+from typing import List, Tuple, Dict, Optional
 
-# API Configuration
-API_TOKEN = os.getenv('NUB_YTDLP_API', '')  # Use user token if env missing
-BASE_URL = 'https://api.nubcoder.com'
 
+_CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
+os.makedirs(_CACHE_DIR, exist_ok=True)
+_MEM_CACHE = {}
 logger = logging.getLogger(__name__)
 
-def get_video_info(url_or_query: str, max_results: int = 1, mode: str = "audio") -> Tuple[str, str, int, str, str, int, str, str, str]:
-    """Get video info - returns (title, video_id, duration, youtube_link, channel_name, views, stream_url, thumbnail, time_taken)"""
+SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+DETAILS_URL = "https://www.googleapis.com/youtube/v3/videos"
+
+def get_available_keys():
+    raw = os.getenv("YOUTUBE_API_KEYS", "AIzaSyBeAORFKvSwRLBF9CgGJPu-IXBtQ9rVIBI, AIzaSyCoHwfI-SHscO9qJoOg_lz32k6He_Yoq1c")
+    keys = [k.strip() for k in raw.split(",") if k.strip()]
+    return keys
+
+def get_random_key():
+    keys = get_available_keys()
+    if not keys:
+        raise RuntimeError("YouTube API key not configured")
+    return random.choice(keys)
+
+def parse_dur(duration: str) -> str:
+    match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration or "")
+    if not match:
+        return "N/A"
+    hours, minutes, seconds = match.groups(default="0")
+    h = int(hours)
+    m = int(minutes)
+    s = int(seconds)
+    if h:
+        return f"{h}:{m:02d}:{s:02d}"
+    return f"{m}:{s:02d}"
+
+def format_ind(n):
     try:
-        start_time = time.time()
-        logger.debug(
-            f"[youtube.get_video_info] Requesting info for query='{url_or_query}' max_results={max_results} mode={mode}; token_set={bool(API_TOKEN)}"
-        )
-        response = requests.get(
-            f'{BASE_URL}/info',
-            params={'token': API_TOKEN, 'q': url_or_query, 'max_results': max_results, 'mode': mode},
-            timeout=30
-        )
-        response.raise_for_status()
-        data = response.json()
-        elapsed = round(time.time() - start_time, 3)
-        logger.info(f"[youtube.get_video_info] API response received in {elapsed}s")
+        n = float(n)
+    except (ValueError, TypeError):
+        return "0"
+    if n >= 10**7:
+        return f"{n / 10**7:.1f} Crore"
+    if n >= 10**5:
+        return f"{n / 10**5:.1f} Lakh"
+    if n >= 10**3:
+        return f"{n / 10**3:.1f}K"
+    return str(int(n))
 
-        if 'error' in data:
-            logger.warning(f"[youtube.get_video_info] API returned error: {data.get('error')}")
-            return None, None, None, None, None, None, None, None, data.get('error')
-        
-        return (
-            data.get('title', 'N/A'),
-            data.get('video_id', 'N/A'),
-            data.get('duration', '0'),
-            data.get('youtube_link', 'N/A') if data.get('youtube_link') else data.get('url', 'N/A'),
-            data.get('channel_name', 'N/A') if data.get('channel_name') else data.get('channel', 'N/A'),
-            data.get('views', '0'),
-            data.get('stream_url', 'N/A'),
-            data.get('thumbnail', 'N/A'),
-            data.get('time_taken', 'N/A')
-        )
-    except requests.RequestException as e:
-        logger.error(f"[youtube.get_video_info] RequestException: {e}")
-        return None, None, None, None, None, None, None, None, str(e)
+def extract_artist(title: str, channel: str):
+    if "-" in title:
+        name = title.split("-", 1)[0].strip()
+        if name:
+            return name
+    return channel or "Unknown Artist"
 
-def search_videos(query: str, limit: int = 5, method: str = "scrape") -> List[Tuple[str, str, str, int, int, str, str]]:
-    """Search videos - returns list of (title, video_id, channel_name, duration, views, thumbnail_url, youtube_link)"""
+def process_video(item, details):
     try:
-        start_time = time.time()
-        logger.debug(f"[youtube.search_videos] Searching query='{query}' limit={limit} method={method}")
-        response = requests.get(
-            f'{BASE_URL}/search',
-            params={'q': query, 'limit': limit, 'method': method},
-            timeout=30
-        )
-        response.raise_for_status()
-        data = response.json()
-        elapsed = round(time.time() - start_time, 3)
-        logger.info(f"[youtube.search_videos] API response received in {elapsed}s")
+        video_id = item["id"]["videoId"]
+        snippet = item.get("snippet", {})
+        title = snippet.get("title", "")
+        channel = snippet.get("channelTitle", "")
+        thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        duration = details.get("contentDetails", {}).get("duration", "N/A")
+        views = details.get("statistics", {}).get("viewCount", "0")
+        artist = extract_artist(title, channel)
+        return {
+            "title": title,
+            "url": url,
+            "artist_name": artist,
+            "channel_name": channel,
+            "views": format_ind(views),
+            "duration": parse_dur(duration),
+            "thumbnail": thumbnail,
+        }
+    except Exception:
+        return None
 
-        if 'error' in data:
-            logger.warning(f"[youtube.search_videos] API returned error: {data.get('error')}")
+async def youtube_search(query: str, limit: int = 1):
+    keys = get_available_keys()
+    if not keys:
+        return []
+    async with httpx.AsyncClient(timeout=10) as client:
+        api_key = get_random_key()
+        search_params = {
+            "part": "snippet",
+            "q": query,
+            "maxResults": limit,
+            "type": "video",
+            "key": api_key,
+        }
+        search_res = await client.get(SEARCH_URL, params=search_params)
+        if search_res.status_code != 200:
             return []
-        
+        items = search_res.json().get("items", [])
+        video_ids = [item["id"]["videoId"] for item in items if "videoId" in item.get("id", {})]
+        if not video_ids:
+            return []
+        api_key = get_random_key()
+        details_params = {
+            "part": "contentDetails,statistics",
+            "id": ",".join(video_ids),
+            "key": api_key,
+        }
+        detail_res = await client.get(DETAILS_URL, params=details_params)
+        if detail_res.status_code != 200:
+            return []
+        detail_items = {v["id"]: v for v in detail_res.json().get("items", [])}
         results = []
-        for video in data.get('results', []):
-            results.append((
-                video.get('title', 'N/A'),
-                video.get('video_id', 'N/A'),
-                video.get('channel', 'N/A') if video.get('channel') else video.get('channel_name', 'N/A'),
-                video.get('duration', '0'),
-                video.get('views', '0'),
-                video.get('thumbnail', 'N/A'),
-                video.get('url', 'N/A') if video.get('url') else video.get('youtube_link', 'N/A')
-            ))
+        for item in items:
+            video_id = item["id"].get("videoId")
+            if not video_id:
+                continue
+            video_details = detail_items.get(video_id)
+            if not video_details:
+                continue
+            video_info = process_video(item, video_details)
+            if video_info:
+                results.append(video_info)
+        return results
+
+def _key(url: str, prefix: str = "") -> str:
+    return hashlib.md5((prefix + url).encode()).hexdigest()
+
+def _cache_path(url: str, prefix: str = "") -> str:
+    return os.path.join(_CACHE_DIR, _key(url, prefix) + ".json")
+
+def _extract_expire(stream_url: str) -> int | None:
+    try:
+        q = parse_qs(urlparse(stream_url).query)
+        expire = int(q.get("expire", [0])[0])
+        return expire if expire > int(time.time()) else None
+    except Exception:
+        return None
+
+def _read_cache(url: str, prefix: str = "") -> str | None:
+    path = _cache_path(url, prefix)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        expire = data.get("expire", 0)
+        if time.time() < expire - 15:
+            logger.info(f"[CACHE HIT] {prefix}{url[:80]}... (expires in {int(expire - time.time())}s)")
+            return data.get("url")
+        logger.info(f"[CACHE EXPIRED] {prefix}{url[:80]}... removing")
+        os.remove(path)
+    except Exception:
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+    return None
+
+def _write_cache(url: str, stream_url: str, prefix: str = ""):
+    expire = _extract_expire(stream_url)
+    if not expire:
+        logger.warning(f"[CACHE SKIP] No expire found in stream URL for {url[:80]}")
+        return
+    try:
+        with open(_cache_path(url, prefix), "w") as f:
+            json.dump({"url": stream_url, "expire": expire}, f)
+        logger.info(f"[CACHE WRITE] {prefix}{url[:80]}... (expires in {int(expire - time.time())}s)")
+    except Exception as e:
+        logger.error(f"[CACHE WRITE ERROR] {e}")
+
+async def _run_yt_dlp(url: str, format_selector: str, cookies: str | None):
+    cmd = [
+        "yt-dlp",
+        "--js-runtimes", "node",
+        "--remote-components", "ejs:github",
+        "-f", format_selector,
+        "--no-playlist",
+        "-g",
+        url,
+    ]
+    if cookies and os.path.exists(cookies):
+        cmd.insert(1, "--cookies")
+        cmd.insert(2, cookies)
+    else:
+        cmd.insert(1, "--cookies-from-browser")
+        cmd.insert(2, "firefox")
+    logger.info(f"[YT-DLP] Running: {' '.join(cmd)}")
+    start = time.time()
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=40,
+        )
+    except asyncio.TimeoutError:
+        logger.error(f"[YT-DLP] TIMEOUT after 40s for {url}")
+        return None
+    except Exception as e:
+        logger.error(f"[YT-DLP] Exception: {e}")
+        return None
+    elapsed = round(time.time() - start, 2)
+    if process.returncode == 0 and stdout:
+        stream_url = stdout.decode().strip().split("\n")[0]
+        logger.info(f"[YT-DLP] ✅ Success ({elapsed}s) — {stream_url[:100]}...")
+        return stream_url
+    stderr_text = stderr.decode().strip() if stderr else "no stderr"
+    logger.error(f"[YT-DLP] ❌ Failed (exit={process.returncode}, {elapsed}s) — {url}")
+    logger.error(f"[YT-DLP] stderr: {stderr_text[-500:]}")
+    return None
+
+async def get_stream(url: str, cookies: str | None = None) -> str | None:
+    logger.info(f"[AUDIO] get_stream called: {url}")
+    cached = _MEM_CACHE.get(("audio", url))
+    if cached:
+        expire = _extract_expire(cached)
+        if expire and time.time() < expire - 15:
+            logger.info(f"[AUDIO] MEM_CACHE hit for {url[:80]}")
+            return cached
+    cached = _read_cache(url, prefix="audio_")
+    if cached:
+        _MEM_CACHE[("audio", url)] = cached
+        return cached
+    logger.info(f"[AUDIO] No cache, extracting fresh stream...")
+    stream = await _run_yt_dlp(
+        url,
+        "bestaudio[ext=m4a]/bestaudio/best",
+        cookies,
+    )
+    if stream:
+        _MEM_CACHE[("audio", url)] = stream
+        _write_cache(url, stream, prefix="audio_")
+    else:
+        logger.warning(f"[AUDIO] Extraction returned None for {url}")
+    return stream
+
+async def get_video_stream(url: str, cookies: str | None = None) -> str | None:
+    logger.info(f"[VIDEO] get_video_stream called: {url}")
+    cached = _MEM_CACHE.get(("video", url))
+    if cached:
+        expire = _extract_expire(cached)
+        if expire and time.time() < expire - 15:
+            logger.info(f"[VIDEO] MEM_CACHE hit for {url[:80]}")
+            return cached
+    cached = _read_cache(url, prefix="video_")
+    if cached:
+        _MEM_CACHE[("video", url)] = cached
+        return cached
+    logger.info(f"[VIDEO] No cache, extracting fresh stream...")
+    stream = await _run_yt_dlp(
+        url,
+        "best[ext=mp4][protocol=https]",
+        cookies,
+    )
+    if stream:
+        _MEM_CACHE[("video", url)] = stream
+        _write_cache(url, stream, prefix="video_")
+    else:
+        logger.warning(f"[VIDEO] Extraction returned None for {url}")
+    return stream
+
+
+# New: Get video info using local search and stream extraction
+async def get_video_info(query: str, max_results: int = 1, mode: str = "audio") -> Tuple[str, str, str, str, str, str, str, str, str]:
+    """Get video info using local search and stream extraction."""
+    try:
+        logger.debug(f"[youtube.get_video_info] Searching for '{query}' (max_results={max_results}, mode={mode})")
+        results = await youtube_search(query, limit=max_results)
+        if not results:
+            return (None,) * 9
+        video = results[0]
+        video_id = video['url'].split('v=')[-1]
+        stream_url = await get_stream(video['url']) if mode == "audio" else await get_video_stream(video['url'])
+        return (
+            video.get('title', 'N/A'),
+            video_id,
+            video.get('duration', '0'),
+            video.get('url', 'N/A'),
+            video.get('channel_name', 'N/A'),
+            video.get('views', '0'),
+            stream_url or 'N/A',
+            video.get('thumbnail', 'N/A'),
+            'local',
+        )
+    except Exception as e:
+        logger.error(f"[youtube.get_video_info] Exception: {e}")
+        return (None,) * 9
+
+
+# New: Search videos using local YouTube Data API logic
+async def search_videos(query: str, limit: int = 5) -> List[Dict]:
+    """Search videos using local YouTube Data API logic."""
+    try:
+        logger.debug(f"[youtube.search_videos] Searching query='{query}' limit={limit}")
+        results = await youtube_search(query, limit=limit)
         logger.debug(f"[youtube.search_videos] Returning {len(results)} results")
         return results
-    except requests.RequestException as e:
-        logger.error(f"[youtube.search_videos] RequestException: {e}")
+    except Exception as e:
+        logger.error(f"[youtube.search_videos] Exception: {e}")
         return []
 
 def get_trending_songs(limit: int = 10) -> List[dict]:

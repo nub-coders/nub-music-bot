@@ -1279,6 +1279,7 @@ async def commands_handler(client, callback_query):
         ],
         [
             InlineKeyboardButton("⚙️ Owner",      callback_data="commands_owner"),
+            InlineKeyboardButton("🌐 Repo", url="https://github.com/nub-coders/nub-music-bot"),
         ],
         [InlineKeyboardButton("🏠 Home",         callback_data="commands_back")],
     ]
