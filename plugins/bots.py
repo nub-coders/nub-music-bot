@@ -2043,8 +2043,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
         if is_active:
             # Clear the song queue and end the session
             await remove_active_chat(client, chat_id)
-            if chat_id in queues:
-                queues[chat_id].clear()
+            queues.pop(chat_id, None)
             try:
                 await call_py.leave_call(chat_id)
             except Exception as e:
@@ -2058,8 +2057,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             except Exception as e:
                 logger.warning(f"Could not delete message: {e}")
             
-            if chat_id in playing:
-                playing[chat_id].clear()
+            playing.pop(chat_id, None)
             
             await callback_query.answer("✅ Stream ended successfully", show_alert=False)
         else:
@@ -2072,14 +2070,12 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             await callback_query.message.reply(
                 f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
             disable_web_page_preview=True)
-            if chat_id in playing:
-                playing[chat_id].clear()
+            playing.pop(chat_id, None)
             
             await callback_query.answer("ℹ️ No active stream found", show_alert=False)
     except NotInCallError:
         await remove_active_chat(client, chat_id)
-        if chat_id in playing:
-            playing[chat_id].clear()
+        playing.pop(chat_id, None)
         await callback_query.answer("✅ Stream ended (not in call)", show_alert=False)
     except Exception as e:
         logger.error(f"Error in end button handler: {e}")
@@ -2101,22 +2097,22 @@ async def end_handler_func(client, message):
    is_active = await is_active_chat(client, message.chat.id)
    if is_active:
        await remove_active_chat(client, message.chat.id)
-       queues[message.chat.id].clear()
+       queues.pop(message.chat.id, None)
        await client.send_message(message.chat.id,
 f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}", 
             disable_web_page_preview=True)
        await call_py.leave_call(message.chat.id)
-       playing[message.chat.id].clear()
+       playing.pop(message.chat.id, None)
    else:
      await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
 disable_web_page_preview=True)
      await remove_active_chat(client, message.chat.id)
      await call_py.leave_call(message.chat.id)
-     playing[message.chat.id].clear()
+     playing.pop(message.chat.id, None)
   except NotInCallError:
      await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
 disable_web_page_preview=True)
-     playing[message.chat.id].clear()
+     playing.pop(message.chat.id, None)
 
 
 
