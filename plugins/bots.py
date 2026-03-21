@@ -1054,24 +1054,24 @@ async def user_client_start_handler(client, message):
     session_name = f'user_{client.me.id}'
     user_dir = f"{ggg}/{session_name}"
     os.makedirs(user_dir, exist_ok=True)
-    editing = await message.reply("⚡", disable_web_page_preview=True)
+    editing = await message.reply("Loading...", disable_web_page_preview=True)
     owner = await client.get_users(OWNER_ID)
     ow_id = owner.id if owner.username else None
 
     buttons = [
-   [InlineKeyboardButton("Aᴅᴅ ᴍᴇ ᴛᴏ ɢʀᴏᴜᴘ", url=f"https://t.me/{client.me.username}?startgroup=true", style=ButtonStyle.PRIMARY)],
-   [InlineKeyboardButton("Hᴇʟᴘ & ᴄᴏᴍᴍᴀɴᴅꜱ", callback_data="commands_all", style=ButtonStyle.PRIMARY)],
+   [InlineKeyboardButton("Add me to group", url=f"https://t.me/{client.me.username}?startgroup=true", style=ButtonStyle.PRIMARY)],
+   [InlineKeyboardButton("Help & Commands", callback_data="commands_all", style=ButtonStyle.PRIMARY)],
    [
        InlineKeyboardButton(
-           "Cʀᴇᴀᴛᴏʀ",
+           "Creator",
            user_id=OWNER_ID,
            style=ButtonStyle.DEFAULT
        ) if ow_id else InlineKeyboardButton(
-           "Cʀᴇᴀᴛᴏʀ",
+           "Creator",
            url="https://t.me/NubDockerbot",
            style=ButtonStyle.DEFAULT
        ),
-       InlineKeyboardButton("Sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=f"https://t.me/{GROUP}", style=ButtonStyle.DEFAULT)
+       InlineKeyboardButton("Support Chat", url=f"https://t.me/{GROUP}", style=ButtonStyle.DEFAULT)
    ],
 ]
     import psutil
@@ -1120,14 +1120,11 @@ async def user_client_start_handler(client, message):
 
 
 
-       greet_message = await gvarstatus(client.me.id, "WELCOME") or """
-🌟 𝖂𝖊𝖑𝖈𝖔𝖒𝖊, {name}! 🌟
+       greet_message = await gvarstatus(client.me.id, "WELCOME") or """Welcome, {name}.
 
-🎶 Your **musical journey** begins with {botname}!
-
-✨ Enjoy _crystal-clear_ audio and a vast library of sounds.
-
-🚀 Get ready for an *unparalleled* musical adventure!
+Your musical journey begins with {botname}.
+Enjoy crystal-clear audio and a vast library of sounds.
+Get ready for an unparalleled musical adventure.
 """
 
        send = client.send_video if alive_logo.endswith(".mp4") else client.send_photo
@@ -2050,7 +2047,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
                 logger.warning(f"Error leaving call: {e}")
             
             await callback_query.message.reply(
-                f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {callback_query.from_user.mention()}", 
+                f"QUEUE CLEARED\nStreaming stopped\nRequested by: {callback_query.from_user.mention()}", 
             disable_web_page_preview=True)
             try:
                 await callback_query.message.delete()
@@ -2059,7 +2056,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
             
             playing.pop(chat_id, None)
             
-            await callback_query.answer("✅ Stream ended successfully", show_alert=False)
+            await callback_query.answer("Stream ended successfully", show_alert=False)
         else:
             await remove_active_chat(client, chat_id)
             try:
@@ -2068,7 +2065,7 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
                 logger.warning(f"Error leaving call: {e}")
             
             await callback_query.message.reply(
-                f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+                f"NO STREAM\nAssistant idle\nNothing playing", 
             disable_web_page_preview=True)
             playing.pop(chat_id, None)
             
@@ -2076,10 +2073,10 @@ async def button_end_handler(client: Client, callback_query: CallbackQuery):
     except NotInCallError:
         await remove_active_chat(client, chat_id)
         playing.pop(chat_id, None)
-        await callback_query.answer("✅ Stream ended (not in call)", show_alert=False)
+        await callback_query.answer("Stream ended (not in call)", show_alert=False)
     except Exception as e:
         logger.error(f"Error in end button handler: {e}")
-        await callback_query.answer(f"❌ Error: {str(e)[:100]}", show_alert=True)
+        await callback_query.answer(f"Error: {str(e)[:100]}", show_alert=True)
 
 
 @Client.on_message(filters.command("end"))
@@ -2099,18 +2096,18 @@ async def end_handler_func(client, message):
        await remove_active_chat(client, message.chat.id)
        queues.pop(message.chat.id, None)
        await client.send_message(message.chat.id,
-f"✅ 𝗤𝗨𝗘𝗨𝗘 𝗖𝗟𝗘𝗔𝗥𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗦𝘁𝗿𝗲𝗮𝗺𝗶𝗻𝗴 𝘀𝘁𝗼𝗽𝗽𝗲𝗱\n┗ 👤 {message.from_user.mention()}", 
+f"QUEUE CLEARED\nStreaming stopped\nRequested by: {message.from_user.mention()}", 
             disable_web_page_preview=True)
        await call_py.leave_call(message.chat.id)
        playing.pop(message.chat.id, None)
    else:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+     await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", 
 disable_web_page_preview=True)
      await remove_active_chat(client, message.chat.id)
      await call_py.leave_call(message.chat.id)
      playing.pop(message.chat.id, None)
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+     await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", 
 disable_web_page_preview=True)
      playing.pop(message.chat.id, None)
 
@@ -2142,7 +2139,7 @@ async def button_skip_handler(client: Client, callback_query: CallbackQuery):
         if chat_id in queues and len(queues[chat_id]) > 0:
             # There's a next song in queue
             next_song = queues[chat_id].pop(0)
-            await callback_query.message.reply(f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {callback_query.from_user.mention()}", disable_web_page_preview=True)
+            await callback_query.message.reply(f"SKIPPING\nNext track loading...\nRequested by: {callback_query.from_user.mention()}", disable_web_page_preview=True)
             
             try:
                 await clients['call_py'].pause(chat_id)
@@ -2173,7 +2170,7 @@ async def button_skip_handler(client: Client, callback_query: CallbackQuery):
             if chat_id in playing:
                 playing[chat_id].clear()
             
-            await callback_query.message.reply(f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {callback_query.from_user.mention()}", disable_web_page_preview=True)
+            await callback_query.message.reply(f"SKIPPED\nQueue is now empty\nRequested by: {callback_query.from_user.mention()}", disable_web_page_preview=True)
             
             try:
                 await callback_query.message.delete()
@@ -2186,7 +2183,7 @@ async def button_skip_handler(client: Client, callback_query: CallbackQuery):
         await remove_active_chat(client, chat_id)
         if chat_id in playing:
             playing[chat_id].clear()
-        await callback_query.answer("✅ Stream ended (not in call)", show_alert=False)
+        await callback_query.answer("Stream ended (not in call)", show_alert=False)
     except Exception as e:
         logger.error(f"Error in skip button handler: {e}")
         await callback_query.answer(f"❌ Error: {str(e)[:100]}", show_alert=True)
@@ -2270,7 +2267,7 @@ async def skip_handler_func(client, message):
    if message.chat.id in queues:
     if len(queues[message.chat.id]) >0:
        next = queues[message.chat.id].pop(0)
-       await client.send_message(message.chat.id, f"⏭️ 𝗦𝗞𝗜𝗣𝗣𝗜𝗡𝗚!\n┏━━━━━━━━━━━━━━\n┣ 𝗡𝗲𝘅𝘁 𝘁𝗿𝗮𝗰𝗸 𝗹𝗼𝗮𝗱𝗶𝗻𝗴...\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
+       await client.send_message(message.chat.id, f"SKIPPING\nNext track loading...\nRequested by: {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id] = next
        try:
           await call_py.pause(message.chat.id)
@@ -2280,16 +2277,16 @@ async def skip_handler_func(client, message):
     else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
-       await client.send_message(message.chat.id, f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
+       await client.send_message(message.chat.id, f"SKIPPED\nQueue is now empty!\nRequested by: {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id].clear()
    else:
        await call_py.leave_call(message.chat.id)
        await remove_active_chat(client, message.chat.id)
        await client.send_message(message.chat.id,
-              f"🚫 𝗦𝗞𝗜𝗣𝗣𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗤𝘂𝗲𝘂𝗲 𝗶𝘀 𝗻𝗼𝘄 𝗲𝗺𝗽𝘁𝘆!\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
+              f"SKIPPED\nQueue is now empty!\nRequested by: {message.from_user.mention()}", disable_web_page_preview=True)
        playing[message.chat.id].clear()
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", 
+     await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", 
 disable_web_page_preview=True)
      playing[message.chat.id].clear()
 
@@ -2359,10 +2356,10 @@ async def resume_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.resume(message.chat.id)
-       await client.send_message(message.chat.id, f"▶️ 𝗥𝗘𝗦𝗨𝗠𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗽𝗮𝘂𝘀𝗲 𝘁𝗼 𝘀𝘁𝗼𝗽\n┗ 👤 {message.from_user.mention()}", disable_web_page_preview=True)
-   else: await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
+       await client.send_message(message.chat.id, f"RESUMED\nUse /pause to stop\nRequested by: {message.from_user.mention()}", disable_web_page_preview=True)
+   else: await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", disable_web_page_preview=True)
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
+     await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", disable_web_page_preview=True)
 
 
 @Client.on_message(filters.command("pause"))
@@ -2375,12 +2372,12 @@ async def pause_handler_func(client, message):
    bot_username = client.me.username
    if  await is_active_chat(client, message.chat.id):
        await call_py.pause(message.chat.id)
-       await client.send_message(message.chat.id, f"⏸️ 𝗣𝗔𝗨𝗦𝗘𝗗!\n┏━━━━━━━━━━━━━━\n┣ 𝗨𝘀𝗲 /𝗿𝗲𝘀𝘂𝗺𝗲 𝘁𝗼 𝗰𝗼𝗻𝘁𝗶𝗻𝘂𝗲\n┗ 👤 {message.from_user.mention()}", 
+       await client.send_message(message.chat.id, f"PAUSED\nUse /resume to continue\nRequested by: {message.from_user.mention()}", 
 disable_web_page_preview=True)
    else:
-       await client.send_message(message.chat.id,  f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
+       await client.send_message(message.chat.id,  f"NO STREAM\nAssistant idle\nNothing playing", disable_web_page_preview=True)
   except NotInCallError:
-     await client.send_message(message.chat.id, f"🚫 𝗡𝗢 𝗦𝗧𝗥𝗘𝗔𝗠!\n┏━━━━━━━━━━━━━━\n┣ 𝗔𝘀𝘀𝗶𝘀𝘁𝗮𝗻𝘁 𝗶𝗱𝗹𝗲\n┗ 🎧 𝗡𝗼𝘁𝗵𝗶𝗻𝗴 𝗽𝗹𝗮𝘆𝗶𝗻𝗴!", disable_web_page_preview=True)
+     await client.send_message(message.chat.id, f"NO STREAM\nAssistant idle\nNothing playing", disable_web_page_preview=True)
 
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
