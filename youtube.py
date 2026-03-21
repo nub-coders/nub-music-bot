@@ -1,8 +1,8 @@
 
 
-
 import os
 import re
+import sys
 import logging
 import asyncio
 import httpx
@@ -10,6 +10,9 @@ import random
 import hashlib
 import json
 import time
+import subprocess
+import requests
+import yt_dlp
 from urllib.parse import urlparse, parse_qs
 from typing import List, Tuple, Dict, Optional
 
@@ -18,6 +21,10 @@ _CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 os.makedirs(_CACHE_DIR, exist_ok=True)
 _MEM_CACHE = {}
 logger = logging.getLogger(__name__)
+
+# Optional API token and base URL for external YouTube API proxy
+API_TOKEN = os.getenv("YT_API_TOKEN", None)
+BASE_URL = os.getenv("YT_API_BASE_URL", "")
 
 SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 DETAILS_URL = "https://www.googleapis.com/youtube/v3/videos"
